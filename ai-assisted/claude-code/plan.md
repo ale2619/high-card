@@ -196,13 +196,33 @@ The project's custom `StringUtil.isNullOrEmpty()` was replaced with Spring's bui
 `StringUtils.hasText()` (inverse logic: `!StringUtils.hasText(x)` ≡ `isNullOrEmpty(x)`).
 `StringUtil.java` was deleted. No new dependency needed — `spring-core` is already on the classpath.
 
-#### ✅ 2.8 Builder Pattern (added during code review)
+#### ✅ 2.8 Builder Pattern — standing rule
+
+`@Builder` (or `@SuperBuilder` for inheritance chains) is preferred over `new Type()` + setters wherever technically correct.
+`@SuperBuilder` requires the annotation on all classes in the hierarchy; avoided on response classes whose base (`GenericResponse`) carries static factory methods.
 
 `@Builder` + `@NoArgsConstructor` + `@AllArgsConstructor` added to `StatusDTO`, `User`, `UserDTO`, `CriteriaAddUser`.
 All call sites refactored to use `Type.builder()...build()` instead of `new Type()` + setters.
 `GenericException` static initialiser and `createStatus()` helper replaced with inline `StatusDTO.builder()` calls.
 
 ---
+
+### ✅ PHASE 2.9 — Pre-Phase-5 additions (custom exceptions, AOP logging, addUser response)
+
+#### ✅ addUser returns created user
+`AddUserResult` and `AddUserResponse` now carry a `UserDTO user` field populated with the
+assigned GUID. `AddUserAssembler.toResponse()` builds the response via `@SuperBuilder`.
+Controller return type changed to `AddUserResponse`.
+
+#### ✅ AOP logging (`LoggingAspect`)
+- **Controllers** (INFO): logs `[HTTP_METHOD URI]` on entry and `OK [Xms]` on exit.
+  Uses `HttpServletRequest` from `RequestContextHolder` for accurate path info.
+- **Services** (INFO): logs method entry/exit with elapsed time via `@Around`.
+- **Inline debug logs** added to `UserServiceImpl`: field validation steps, email uniqueness
+  check, GUID after persist, search criteria and result counts.
+- **Validators** (`EmailValidator`, `ItalianPhoneNumberValidator`): `@Slf4j` + debug logs
+  on entry, blank check, and regex failure (AOP cannot intercept ConstraintValidator calls).
+- `spring-boot-starter-aop` added to `pom.xml`.
 
 ### ✅ PHASE 3 — Centralized Exception Handling
 
@@ -248,7 +268,7 @@ public static GenericResponse error(StatusDTO status) { ...}
 
 ---
 
-### PHASE 4 — Pagination, Sorting and Search
+### ✅ PHASE 4 — Pagination, Sorting and Search
 
 **Complexity**: MEDIUM | **Depends on**: Phase 3
 

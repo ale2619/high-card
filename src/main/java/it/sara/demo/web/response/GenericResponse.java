@@ -2,12 +2,16 @@ package it.sara.demo.web.response;
 
 import it.sara.demo.dto.StatusDTO;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
 @Getter
 @Setter
+@SuperBuilder
+@NoArgsConstructor
 public class GenericResponse {
 
     private StatusDTO status;
