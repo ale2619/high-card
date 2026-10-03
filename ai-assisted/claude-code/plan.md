@@ -196,13 +196,19 @@ The project's custom `StringUtil.isNullOrEmpty()` was replaced with Spring's bui
 `StringUtils.hasText()` (inverse logic: `!StringUtils.hasText(x)` ≡ `isNullOrEmpty(x)`).
 `StringUtil.java` was deleted. No new dependency needed — `spring-core` is already on the classpath.
 
+#### ✅ 2.8 Builder Pattern (added during code review)
+
+`@Builder` + `@NoArgsConstructor` + `@AllArgsConstructor` added to `StatusDTO`, `User`, `UserDTO`, `CriteriaAddUser`.
+All call sites refactored to use `Type.builder()...build()` instead of `new Type()` + setters.
+`GenericException` static initialiser and `createStatus()` helper replaced with inline `StatusDTO.builder()` calls.
+
 ---
 
-### PHASE 3 — Centralized Exception Handling
+### ✅ PHASE 3 — Centralized Exception Handling
 
 **Complexity**: MEDIUM | **Depends on**: Phase 2
 
-#### 3.1 `GlobalExceptionHandler.java`
+#### ✅ 3.1 `GlobalExceptionHandler.java`
 
 ```java
 
@@ -217,12 +223,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<GenericResponse> handleValidation(MethodArgumentNotValidException e) {
         // aggregate violation messages from BindingResult
-        return ResponseEntity.ok(GenericResponse.error(400, "Validation failed: ..."));
+        return ResponseEntity.ok(GenericResponse.error("Validation failed: ..."));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<GenericResponse> handleUnexpected(Exception e) {
-        return ResponseEntity.ok(GenericResponse.error(500, "Unexpected error"));
+        return ResponseEntity.ok(GenericResponse.error("Unexpected error"));
     }
 }
 ```
@@ -230,12 +236,12 @@ public class GlobalExceptionHandler {
 **Requirement**: all HTTP responses must return status code **200**.
 Errors are communicated via `StatusDTO.code` in the response body.
 
-#### 3.2 `GenericResponse.error()` factory methods
+#### ✅ 3.2 `GenericResponse.error()` factory methods
 
 `GenericResponse` already has `success()`. Add:
 
 ```java
-public static GenericResponse error(int code, String message) { ...}
+public static GenericResponse error(String message) { ...}
 
 public static GenericResponse error(StatusDTO status) { ...}
 ```

@@ -21,7 +21,7 @@ public class ItalianPhoneNumberValidator implements ConstraintValidator<ValidIta
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
-        if (StringUtils.hasText(value)) {
+        if (!StringUtils.hasText(value)) {
             return false;
         }
         return value.matches(PHONE_REGEX);

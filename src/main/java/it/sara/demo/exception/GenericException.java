@@ -3,15 +3,15 @@ package it.sara.demo.exception;
 import it.sara.demo.dto.StatusDTO;
 import lombok.Getter;
 
+import java.util.UUID;
+
 @Getter
 public class GenericException extends Exception {
 
-    public final static StatusDTO GENERIC_ERROR = new StatusDTO();
-
-    static {
-        GENERIC_ERROR.setCode(500);
-        GENERIC_ERROR.setMessage("Generic error");
-    }
+    public static final StatusDTO GENERIC_ERROR = StatusDTO.builder()
+            .code(500)
+            .message("Generic error")
+            .build();
 
     private final StatusDTO status;
 
@@ -20,14 +20,10 @@ public class GenericException extends Exception {
     }
 
     public GenericException(int code, String message) {
-        this.status = createStatus(code, message);
-    }
-
-    private StatusDTO createStatus(int code, String message) {
-        StatusDTO status = new StatusDTO();
-        status.setCode(code);
-        status.setMessage(message);
-        status.setTraceId(java.util.UUID.randomUUID().toString());
-        return status;
+        this.status = StatusDTO.builder()
+                .code(code)
+                .message(message)
+                .traceId(UUID.randomUUID().toString())
+                .build();
     }
 }

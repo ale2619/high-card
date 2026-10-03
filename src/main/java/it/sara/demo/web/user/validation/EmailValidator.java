@@ -20,7 +20,7 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
-        if (StringUtils.hasText(value)) {
+        if (!StringUtils.hasText(value)) {
             return false;
         }
         return value.matches(EMAIL_REGEX);
