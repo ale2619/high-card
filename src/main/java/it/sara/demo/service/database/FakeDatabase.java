@@ -4,6 +4,7 @@ import it.sara.demo.service.database.model.User;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class FakeDatabase {
 
@@ -11,18 +12,16 @@ public class FakeDatabase {
 
     static {
         for (int i = 0; i < 10; i++) {
-            User user = new User();
-            user.setGuid(java.util.UUID.randomUUID().toString());
-            user.setFirstName("First name " + i);
-            user.setLastName("Last name " + i);
-            user.setEmail("user" + i + "@example.com");
-            user.setPhoneNumber("+393331234" + String.format("%03d", i));
-            TABLE_USER.add(user);
+            TABLE_USER.add(User.builder()
+                    .guid(UUID.randomUUID().toString())
+                    .firstName("First name " + i)
+                    .lastName("Last name " + i)
+                    .email("user" + i + "@example.com")
+                    .phoneNumber("+393331234" + String.format("%03d", i))
+                    .build());
         }
     }
 
     private FakeDatabase() {
-
     }
-
 }

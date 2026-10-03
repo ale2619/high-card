@@ -22,14 +22,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AddUserResult addUser(CriteriaAddUser criteria) throws GenericException {
-
-        AddUserResult returnValue;
-        User user;
-
         try {
-
-            returnValue = new AddUserResult();
-
             if (!StringUtils.hasText(criteria.getFirstName())) {
                 throw new GenericException(400, "First name is required");
             }
@@ -43,15 +36,18 @@ public class UserServiceImpl implements UserService {
                 throw new GenericException(400, "Phone is required");
             }
 
-            user = new User();
-            user.setFirstName(criteria.getFirstName());
-            user.setLastName(criteria.getLastName());
-            user.setEmail(criteria.getEmail());
-            user.setPhoneNumber(criteria.getPhoneNumber());
+            User user = User.builder()
+                    .firstName(criteria.getFirstName())
+                    .lastName(criteria.getLastName())
+                    .email(criteria.getEmail())
+                    .phoneNumber(criteria.getPhoneNumber())
+                    .build();
 
             if (!userRepository.save(user)) {
                 throw new GenericException(500, "Error saving user");
             }
+
+            return new AddUserResult();
 
         } catch (GenericException e) {
             if (log.isErrorEnabled()) {
@@ -64,7 +60,6 @@ public class UserServiceImpl implements UserService {
             }
             throw new GenericException(GenericException.GENERIC_ERROR);
         }
-        return returnValue;
     }
 
     @Override
