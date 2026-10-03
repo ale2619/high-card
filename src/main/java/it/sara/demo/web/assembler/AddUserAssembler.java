@@ -7,12 +7,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class AddUserAssembler {
 
-    public CriteriaAddUser toCriteria(AddUserRequest addUserRequest) {
-        CriteriaAddUser returnValue = new CriteriaAddUser();
-        returnValue.setEmail(addUserRequest.getEmail());
-        returnValue.setFirstName(addUserRequest.getFirstName());
-        returnValue.setLastName(addUserRequest.getLastName());
-        returnValue.setPhoneNumber(addUserRequest.getPhoneNumber());
-        return returnValue;
+    public CriteriaAddUser toCriteria(AddUserRequest request) {
+        return CriteriaAddUser.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .phoneNumber(request.getPhoneNumber())
+                .build();
     }
 }

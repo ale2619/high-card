@@ -8,11 +8,11 @@ import org.springframework.stereotype.Component;
 public class UserAssembler {
 
     public UserDTO toDTO(User user) {
-        UserDTO returnValue = new UserDTO();
-        returnValue.setEmail(user.getEmail());
-        returnValue.setGuid(user.getGuid());
-        returnValue.setFirstName(user.getFirstName());
-        returnValue.setLastName(user.getLastName());
-        return returnValue;
+        return UserDTO.builder()
+                .guid(user.getGuid())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .build();
     }
 }

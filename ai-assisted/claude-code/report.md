@@ -68,6 +68,31 @@ correct mapping (note the inverted boolean), removed the `StringUtil` constructo
 from `UserServiceImpl`, and deleted the custom class. The validators were already using
 `org.springframework.util.StringUtils` from the start.
 
+### Builder Pattern Introduction (between Phase 2 and 3)
+
+```
+"Prima di procedere ti chiedo di introdurre i builder dove necessario
+per evitare di istanziare e settare manualmente i campi di una classe"
+```
+
+Applied `@Builder` + `@NoArgsConstructor` + `@AllArgsConstructor` to `StatusDTO`, `User`,
+`UserDTO`, `CriteriaAddUser`. Refactored all 7 call sites. `GenericException` had its static
+initialiser and private helper method collapsed into inline `StatusDTO.builder()` calls,
+removing 10 lines of boilerplate. `FakeDatabase` seed loop became a single fluent chain per
+record.
+
+### Phase 3 — Centralized Exception Handling
+
+```
+"procedi con il prossimo step"
+```
+
+The tool also auto-corrected a logic inversion introduced by an external linter in both
+validators (`if (StringUtils.hasText(value))` → `if (!StringUtils.hasText(value))`) before
+proceeding, preventing a regression where every valid input would have been rejected.
+Additionally applied IDE suggestions to replace `@RequestMapping(method = PUT/POST)` with
+`@PutMapping`/`@PostMapping`.
+
 ### Prompts for Remaining Implementation Phases *[TO BE ADDED]*
 
 Key prompts used during code generation will be documented here as phases are completed.

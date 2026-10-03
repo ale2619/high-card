@@ -4,17 +4,37 @@ import it.sara.demo.dto.StatusDTO;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 public class GenericResponse {
+
     private StatusDTO status;
 
     public static GenericResponse success(String message) {
-        GenericResponse returnValue = new GenericResponse();
-        returnValue.setStatus(new StatusDTO());
-        returnValue.getStatus().setCode(200);
-        returnValue.getStatus().setMessage(message != null ? message : "Success");
-        returnValue.getStatus().setTraceId(java.util.UUID.randomUUID().toString());
-        return returnValue;
+        GenericResponse response = new GenericResponse();
+        response.setStatus(StatusDTO.builder()
+                .code(200)
+                .message(message != null ? message : "Success")
+                .traceId(UUID.randomUUID().toString())
+                .build());
+        return response;
+    }
+
+    public static GenericResponse error(String message) {
+        GenericResponse response = new GenericResponse();
+        response.setStatus(StatusDTO.builder()
+                .code(200)
+                .message(message)
+                .traceId(UUID.randomUUID().toString())
+                .build());
+        return response;
+    }
+
+    public static GenericResponse error(StatusDTO status) {
+        GenericResponse response = new GenericResponse();
+        response.setStatus(status);
+        return response;
     }
 }
