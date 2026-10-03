@@ -69,13 +69,22 @@ Add missing dependencies:
 </dependency>
 ```
 
-#### 1.2 Configuration (`application.properties`)
+#### 1.2 Configuration (`application.yml`)
 
-```properties
-jwt.secret=change-in-production-key-minimum-256-bit
-jwt.expiration=3600000
-jwt.issuer=high-card-app
-jwt.allowed-roles=USER,ADMIN
+`application.properties` was converted to `application.yml` for better readability and
+hierarchical structure — YAML grouping makes related properties visually explicit and
+avoids repeated prefixes (e.g., `jwt.secret`, `jwt.expiration` → nested under `jwt:`).
+
+```yaml
+spring:
+  application:
+    name: demo
+
+jwt:
+  secret: change-in-production-key-minimum-256-bit-a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+  expiration: 3600000
+  issuer: high-card-idp
+  allowed-roles: USER,ADMIN
 ```
 
 **Checkpoint**: `mvn compile` must pass before proceeding.
@@ -85,7 +94,7 @@ jwt.allowed-roles=USER,ADMIN
 ### PHASE 2 — Bug Fixing and Data Validation
 **Complexity**: LOW-MEDIUM | **Depends on**: Phase 1
 
-#### 2.1 Fix Blocking Bug — `UserServiceImpl.java`
+#### ✅ 2.1 Fix Blocking Bug — `UserServiceImpl.java`
 
 **Problem** (line 59): `catch (Exception e)` also catches `GenericException`.
 
@@ -106,7 +115,7 @@ jwt.allowed-roles=USER,ADMIN
 }
 ```
 
-#### 2.2 Email and Italian Phone Number Validation
+#### ✅ 2.2 Email and Italian Phone Number Validation
 
 **Custom annotation `@ValidEmail`**:
 - Regex: `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
@@ -127,7 +136,7 @@ web/user/validation/
 └── ItalianPhoneNumberValidator.java  (ConstraintValidator impl)
 ```
 
-#### 2.3 Fix Seed Data — `FakeDatabase.java`
+#### ✅ 2.3 Fix Seed Data — `FakeDatabase.java`
 
 Current seed phone numbers (`"+39" + i`) are too short and invalid.
 Replace with:
@@ -136,12 +145,31 @@ user.setPhoneNumber("+393331234" + String.format("%03d", i));
 // → "+393331234000", "+393331234001", …
 ```
 
-#### 2.4 SQL Injection Prevention
+#### ✅ 2.4 SQL Injection Prevention
 
 The vulnerability is conceptual (no real SQL), but the defense must be implemented:
 - Validate all inputs before any repository operation
 - No string concatenation to build queries
 - `AddUserAssembler.toCriteria()` must only receive already-validated inputs
+
+#### ✅ 2.5 Constructor Injection Refactoring (added during code review)
+
+Replaced `@Autowired` field injection with constructor injection across all eligible Spring beans:
+- `UserController` and `UserServiceImpl` — fields made `private final`, `@Autowired` removed, `@RequiredArgsConstructor` added
+- `AddUserAssembler`, `UserAssembler`, `StringUtil`, `UserRepository` — already stateless with no dependencies; no change needed
+
+**Rationale**: constructor injection is the Spring-recommended approach since 4.3 — it makes dependencies explicit, enforces immutability via `final`, and allows instantiation without a Spring context (easier unit testing).
+
+#### ✅ 2.6 Additional Bugs Fixed During Code Review
+
+- `AddUserAssembler:14` — `setLastName` was calling `getFirstName()` instead of `getLastName()`; every created user had `firstName == lastName`
+- `UserAssembler:12` — email was being stripped to domain only via `substring(lastIndexOf("@") + 1)`; the full address is now returned
+
+#### ✅ 2.7 Replace Custom `StringUtil` with `org.springframework.util.StringUtils`
+
+The project's custom `StringUtil.isNullOrEmpty()` was replaced with Spring's built-in
+`StringUtils.hasText()` (inverse logic: `!StringUtils.hasText(x)` ≡ `isNullOrEmpty(x)`).
+`StringUtil.java` was deleted. No new dependency needed — `spring-core` is already on the classpath.
 
 ---
 

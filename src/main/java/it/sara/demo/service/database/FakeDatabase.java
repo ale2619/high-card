@@ -16,7 +16,7 @@ public class FakeDatabase {
             user.setFirstName("First name " + i);
             user.setLastName("Last name " + i);
             user.setEmail("user" + i + "@example.com");
-            user.setPhoneNumber("+39" + i);
+            user.setPhoneNumber("+393331234" + String.format("%03d", i));
             TABLE_USER.add(user);
         }
     }
