@@ -8,20 +8,17 @@ import it.sara.demo.service.user.criteria.CriteriaAddUser;
 import it.sara.demo.service.user.criteria.CriteriaGetUsers;
 import it.sara.demo.service.user.result.AddUserResult;
 import it.sara.demo.service.user.result.GetUsersResult;
-import it.sara.demo.service.util.StringUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    @Autowired
-    private StringUtil stringUtil;
-
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Override
     public AddUserResult addUser(CriteriaAddUser criteria) throws GenericException {
@@ -33,16 +30,16 @@ public class UserServiceImpl implements UserService {
 
             returnValue = new AddUserResult();
 
-            if (stringUtil.isNullOrEmpty(criteria.getFirstName())) {
+            if (!StringUtils.hasText(criteria.getFirstName())) {
                 throw new GenericException(400, "First name is required");
             }
-            if (stringUtil.isNullOrEmpty(criteria.getLastName())) {
+            if (!StringUtils.hasText(criteria.getLastName())) {
                 throw new GenericException(400, "Last name is required");
             }
-            if (stringUtil.isNullOrEmpty(criteria.getEmail())) {
+            if (!StringUtils.hasText(criteria.getEmail())) {
                 throw new GenericException(400, "Email is required");
             }
-            if (stringUtil.isNullOrEmpty(criteria.getPhoneNumber())) {
+            if (!StringUtils.hasText(criteria.getPhoneNumber())) {
                 throw new GenericException(400, "Phone is required");
             }
 
@@ -56,6 +53,11 @@ public class UserServiceImpl implements UserService {
                 throw new GenericException(500, "Error saving user");
             }
 
+        } catch (GenericException e) {
+            if (log.isErrorEnabled()) {
+                log.error(e.getMessage(), e);
+            }
+            throw e;
         } catch (Exception e) {
             if (log.isErrorEnabled()) {
                 log.error(e.getMessage(), e);
