@@ -10,18 +10,18 @@ derived from autonomous source code analysis.
 
 ## Starting State (from actual code)
 
-| Component | State |
-|-----------|-------|
-| `UserController.addUser` (PUT) | Working but no input validation |
-| `UserController.getUsers` (POST) | Stub — `ResponseEntity.ok().build()` |
-| `UserServiceImpl.addUser` | Bug: catch swallows GenericException, always returns 500 |
-| `UserServiceImpl.getUsers` | Returns `null` |
-| `GetUsersRequest` | Empty — no fields at all |
-| `UserRepository` | Only `save`, `getByGuid`, `getAll` |
-| Exception handling | No `@ControllerAdvice` |
-| JWT / Spring Security | No dependencies present in `pom.xml` |
-| Tests | Only stub `HighCardApplicationTests` |
-| Javadoc | None |
+| Component                        | State                                                    |
+|----------------------------------|----------------------------------------------------------|
+| `UserController.addUser` (PUT)   | Working but no input validation                          |
+| `UserController.getUsers` (POST) | Stub — `ResponseEntity.ok().build()`                     |
+| `UserServiceImpl.addUser`        | Bug: catch swallows GenericException, always returns 500 |
+| `UserServiceImpl.getUsers`       | Returns `null`                                           |
+| `GetUsersRequest`                | Empty — no fields at all                                 |
+| `UserRepository`                 | Only `save`, `getByGuid`, `getAll`                       |
+| Exception handling               | No `@ControllerAdvice`                                   |
+| JWT / Spring Security            | No dependencies present in `pom.xml`                     |
+| Tests                            | Only stub `HighCardApplicationTests`                     |
+| Javadoc                          | None                                                     |
 
 ---
 
@@ -30,6 +30,7 @@ derived from autonomous source code analysis.
 ---
 
 ### PHASE 1 — Foundations and Dependencies
+
 **Complexity**: LOW | **Priority**: BLOCKING
 
 #### 1.1 Update `pom.xml`
@@ -43,29 +44,29 @@ Add missing dependencies:
     <artifactId>spring-boot-starter-validation</artifactId>
 </dependency>
 
-<!-- Spring Security -->
+        <!-- Spring Security -->
 <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-security</artifactId>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-security</artifactId>
 </dependency>
 
-<!-- JWT — jjwt 0.12.x (latest stable) -->
+        <!-- JWT — jjwt 0.12.x (latest stable) -->
 <dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt-api</artifactId>
-    <version>0.12.3</version>
+<groupId>io.jsonwebtoken</groupId>
+<artifactId>jjwt-api</artifactId>
+<version>0.12.3</version>
 </dependency>
 <dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt-impl</artifactId>
-    <version>0.12.3</version>
-    <scope>runtime</scope>
+<groupId>io.jsonwebtoken</groupId>
+<artifactId>jjwt-impl</artifactId>
+<version>0.12.3</version>
+<scope>runtime</scope>
 </dependency>
 <dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt-jackson</artifactId>
-    <version>0.12.3</version>
-    <scope>runtime</scope>
+<groupId>io.jsonwebtoken</groupId>
+<artifactId>jjwt-jackson</artifactId>
+<version>0.12.3</version>
+<scope>runtime</scope>
 </dependency>
 ```
 
@@ -92,6 +93,7 @@ jwt:
 ---
 
 ### PHASE 2 — Bug Fixing and Data Validation
+
 **Complexity**: LOW-MEDIUM | **Depends on**: Phase 1
 
 #### ✅ 2.1 Fix Blocking Bug — `UserServiceImpl.java`
@@ -100,34 +102,49 @@ jwt:
 
 ```java
 // BEFORE (buggy)
-} catch (Exception e) {
-    log.error(e.getMessage(), e);
-    throw new GenericException(GenericException.GENERIC_ERROR);
+}catch(Exception e){
+        log.
+
+error(e.getMessage(),e);
+        throw new
+
+GenericException(GenericException.GENERIC_ERROR);
 }
 
 // AFTER (fixed)
-} catch (GenericException e) {
-    log.error(e.getMessage(), e);
-    throw e;
-} catch (Exception e) {
-    log.error(e.getMessage(), e);
-    throw new GenericException(GenericException.GENERIC_ERROR);
+        }catch(
+GenericException e){
+        log.
+
+error(e.getMessage(),e);
+        throw e;
+}catch(
+Exception e){
+        log.
+
+error(e.getMessage(),e);
+        throw new
+
+GenericException(GenericException.GENERIC_ERROR);
 }
 ```
 
 #### ✅ 2.2 Email and Italian Phone Number Validation
 
 **Custom annotation `@ValidEmail`**:
+
 - Regex: `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
 - Applied to `AddUserRequest.email`
 
 **Custom annotation `@ValidItalianPhoneNumber`**:
+
 - Accepted formats:
-  - Mobile: `3[0-9]{9}` (10 digits, starts with 3)
-  - With country code: `\+39[0-9]{9,10}` (12-13 characters total)
+    - Mobile: `3[0-9]{9}` (10 digits, starts with 3)
+    - With country code: `\+39[0-9]{9,10}` (12-13 characters total)
 - Applied to `AddUserRequest.phoneNumber`
 
 **Files to create**:
+
 ```
 web/user/validation/
 ├── ValidEmail.java                   (annotation)
@@ -140,14 +157,16 @@ web/user/validation/
 
 Current seed phone numbers (`"+39" + i`) are too short and invalid.
 Replace with:
+
 ```java
-user.setPhoneNumber("+393331234" + String.format("%03d", i));
+user.setPhoneNumber("+393331234"+String.format("%03d", i));
 // → "+393331234000", "+393331234001", …
 ```
 
 #### ✅ 2.4 SQL Injection Prevention
 
 The vulnerability is conceptual (no real SQL), but the defense must be implemented:
+
 - Validate all inputs before any repository operation
 - No string concatenation to build queries
 - `AddUserAssembler.toCriteria()` must only receive already-validated inputs
@@ -155,15 +174,21 @@ The vulnerability is conceptual (no real SQL), but the defense must be implement
 #### ✅ 2.5 Constructor Injection Refactoring (added during code review)
 
 Replaced `@Autowired` field injection with constructor injection across all eligible Spring beans:
-- `UserController` and `UserServiceImpl` — fields made `private final`, `@Autowired` removed, `@RequiredArgsConstructor` added
-- `AddUserAssembler`, `UserAssembler`, `StringUtil`, `UserRepository` — already stateless with no dependencies; no change needed
 
-**Rationale**: constructor injection is the Spring-recommended approach since 4.3 — it makes dependencies explicit, enforces immutability via `final`, and allows instantiation without a Spring context (easier unit testing).
+- `UserController` and `UserServiceImpl` — fields made `private final`, `@Autowired` removed, `@RequiredArgsConstructor`
+  added
+- `AddUserAssembler`, `UserAssembler`, `StringUtil`, `UserRepository` — already stateless with no dependencies; no
+  change needed
+
+**Rationale**: constructor injection is the Spring-recommended approach since 4.3 — it makes dependencies explicit,
+enforces immutability via `final`, and allows instantiation without a Spring context (easier unit testing).
 
 #### ✅ 2.6 Additional Bugs Fixed During Code Review
 
-- `AddUserAssembler:14` — `setLastName` was calling `getFirstName()` instead of `getLastName()`; every created user had `firstName == lastName`
-- `UserAssembler:12` — email was being stripped to domain only via `substring(lastIndexOf("@") + 1)`; the full address is now returned
+- `AddUserAssembler:14` — `setLastName` was calling `getFirstName()` instead of `getLastName()`; every created user had
+  `firstName == lastName`
+- `UserAssembler:12` — email was being stripped to domain only via `substring(lastIndexOf("@") + 1)`; the full address
+  is now returned
 
 #### ✅ 2.7 Replace Custom `StringUtil` with `org.springframework.util.StringUtils`
 
@@ -174,11 +199,13 @@ The project's custom `StringUtil.isNullOrEmpty()` was replaced with Spring's bui
 ---
 
 ### PHASE 3 — Centralized Exception Handling
+
 **Complexity**: MEDIUM | **Depends on**: Phase 2
 
 #### 3.1 `GlobalExceptionHandler.java`
 
 ```java
+
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -206,14 +233,17 @@ Errors are communicated via `StatusDTO.code` in the response body.
 #### 3.2 `GenericResponse.error()` factory methods
 
 `GenericResponse` already has `success()`. Add:
+
 ```java
-public static GenericResponse error(int code, String message) { ... }
-public static GenericResponse error(StatusDTO status) { ... }
+public static GenericResponse error(int code, String message) { ...}
+
+public static GenericResponse error(StatusDTO status) { ...}
 ```
 
 ---
 
 ### PHASE 4 — Pagination, Sorting and Search
+
 **Complexity**: MEDIUM | **Depends on**: Phase 3
 
 #### 4.1 `GetUsersRequest` — add fields
@@ -227,7 +257,8 @@ public class GetUsersRequest extends GenericRequest {
     @Min(0)
     private int pageNumber = 0;
 
-    @Min(1) @Max(100)
+    @Min(1)
+    @Max(100)
     private int pageSize = 10;
 
     @NotNull
@@ -247,11 +278,11 @@ Add the same fields to the criteria (no web layer dependency).
 ```java
 public List<User> search(CriteriaGetUsers criteria) {
     return FakeDatabase.TABLE_USER.stream()
-        .filter(u -> matchesSearchTerm(u, criteria.getSearchTerm()))
-        .sorted(buildComparator(criteria))
-        .skip((long) criteria.getPageNumber() * criteria.getPageSize())
-        .limit(criteria.getPageSize())
-        .collect(Collectors.toList());
+            .filter(u -> matchesSearchTerm(u, criteria.getSearchTerm()))
+            .sorted(buildComparator(criteria))
+            .skip((long) criteria.getPageNumber() * criteria.getPageSize())
+            .limit(criteria.getPageSize())
+            .collect(Collectors.toList());
 }
 ```
 
@@ -268,6 +299,7 @@ Wire controller → service → repository using the criteria pattern.
 ---
 
 ### PHASE 5 — JWT Authentication
+
 **Complexity**: MEDIUM-HIGH | **Depends on**: Phase 3
 
 #### 5.1 `JwtTokenProvider.java`
@@ -280,10 +312,14 @@ security/jwt/
 ```
 
 **`JwtTokenProvider` methods**:
+
 ```java
 String generateToken(String username, String role)
+
 boolean validateToken(String token)      // signature + expiration + issuer + policy
+
 String extractUsername(String token)
+
 Claims extractAllClaims(String token)
 ```
 
@@ -303,6 +339,7 @@ Response structure consistent with `GenericResponse` + `token` field.
 #### 5.3 `JwtAuthenticationFilter`
 
 Extends `OncePerRequestFilter`:
+
 - Extracts `Authorization: Bearer <token>`
 - Validates with `JwtTokenProvider`
 - Sets `SecurityContextHolder`
@@ -311,37 +348,55 @@ Extends `OncePerRequestFilter`:
 
 ```java
 http
-  .csrf(AbstractHttpConfigurer::disable)
-  .sessionManagement(sm -> sm.sessionCreationPolicy(STATELESS))
-  .authorizeHttpRequests(auth -> auth
-      .requestMatchers("/auth/login").permitAll()
-      .anyRequest().authenticated()
+        .csrf(AbstractHttpConfigurer::disable)
+  .
+
+sessionManagement(sm ->sm.
+
+sessionCreationPolicy(STATELESS))
+        .
+
+authorizeHttpRequests(auth ->auth
+        .
+
+requestMatchers("/auth/login").
+
+permitAll()
+      .
+
+anyRequest().
+
+authenticated()
   )
-  .addFilterBefore(jwtAuthenticationFilter,
-      UsernamePasswordAuthenticationFilter.class);
+          .
+
+addFilterBefore(jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter .class);
 ```
 
 ---
 
 ### PHASE 6 — Testing and Documentation
+
 **Complexity**: MEDIUM | **Depends on**: Phases 2–5
 
 #### 6.1 Tests to Create
 
-| File | What it tests |
-|------|--------------|
-| `EmailValidatorTest` | Valid, invalid, null, edge cases |
-| `ItalianPhoneNumberValidatorTest` | +39 format, mobile, invalid |
-| `UserServiceImplTest` | addUser (ok, validation errors, duplicate), catch bug regression |
-| `UserRepositorySearchTest` | Pagination, sorting ASC/DESC, case-insensitive filter |
-| `JwtTokenProviderTest` | Generate, validate, expired, tampered, wrong issuer |
-| `GlobalExceptionHandlerTest` | All handlers, HTTP 200 confirmed in every case |
+| File                              | What it tests                                                    |
+|-----------------------------------|------------------------------------------------------------------|
+| `EmailValidatorTest`              | Valid, invalid, null, edge cases                                 |
+| `ItalianPhoneNumberValidatorTest` | +39 format, mobile, invalid                                      |
+| `UserServiceImplTest`             | addUser (ok, validation errors, duplicate), catch bug regression |
+| `UserRepositorySearchTest`        | Pagination, sorting ASC/DESC, case-insensitive filter            |
+| `JwtTokenProviderTest`            | Generate, validate, expired, tampered, wrong issuer              |
+| `GlobalExceptionHandlerTest`      | All handlers, HTTP 200 confirmed in every case                   |
 
 **Target coverage**: >85%
 
 #### 6.2 Javadoc
 
 Priority classes:
+
 - `UserController` — all public methods with `@param`, `@return`, `@throws`
 - `UserServiceImpl` — business logic explanation
 - `JwtTokenProvider` — validation logic documented
@@ -351,6 +406,7 @@ Priority classes:
 ---
 
 ### PHASE 7 — AI-Assisted Documentation (Bonus)
+
 **Complexity**: LOW | **Current phase**
 
 - [x] `pre-analysis.md` — context and initial analysis
@@ -377,13 +433,13 @@ PHASE 1 (pom.xml, config)
 
 ## Differences from GitHub Copilot Plan
 
-| Aspect | GitHub Copilot | Claude Code |
-|--------|---------------|-------------|
-| `catch (Exception e)` bug | Not identified | Identified and planned (task 2.1) |
-| Invalid seed data | Not mentioned | Identified and planned (task 2.3) |
-| Change execution | Suggestions only | Direct file writes |
-| Architecture verification | Assumed from README | Verified by reading each file |
-| Report | Completed upfront | To be completed post-implementation |
+| Aspect                    | GitHub Copilot      | Claude Code                         |
+|---------------------------|---------------------|-------------------------------------|
+| `catch (Exception e)` bug | Not identified      | Identified and planned (task 2.1)   |
+| Invalid seed data         | Not mentioned       | Identified and planned (task 2.3)   |
+| Change execution          | Suggestions only    | Direct file writes                  |
+| Architecture verification | Assumed from README | Verified by reading each file       |
+| Report                    | Completed upfront   | To be completed post-implementation |
 
 ---
 

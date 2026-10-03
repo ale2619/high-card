@@ -4,7 +4,9 @@
 
 ### Approach Used with Claude Code
 
-Unlike chat-only tools, **Claude Code** is an agentic assistant with direct filesystem access and shell execution capabilities. Context was not provided manually: I instructed the tool to read the README and the `/ai-assisted/github-copilot/` folder as a starting point, letting it autonomously gather all relevant material.
+Unlike chat-only tools, **Claude Code** is an agentic assistant with direct filesystem access and shell execution
+capabilities. Context was not provided manually: I instructed the tool to read the README and the
+`/ai-assisted/github-copilot/` folder as a starting point, letting it autonomously gather all relevant material.
 
 ```
 [INITIAL PROMPT]
@@ -17,6 +19,7 @@ come specificato nel file principale e iniziamo con il piano"
 ### Information Gathered Autonomously
 
 Claude Code read in parallel:
+
 - `README.md` (8 tasks, architectural constraints, AI bonus section)
 - `ai-assisted/github-copilot/README.md`, `pre-analysis.md`, `plan.md` (Copilot documentation)
 - `pom.xml` (tech stack: Spring Boot 3.5.0, Java 17, only Lombok and web-starter)
@@ -59,9 +62,13 @@ it.sara.demo
 #### Critical Bug #1 — Validation Exceptions Silently Swallowed (`UserServiceImpl.java:59-63`)
 
 ```java
-} catch (Exception e) {
-    log.error(e.getMessage(), e);
-    throw new GenericException(GenericException.GENERIC_ERROR); // ← ALWAYS 500
+}catch(Exception e){
+        log.
+
+error(e.getMessage(),e);
+        throw new
+
+GenericException(GenericException.GENERIC_ERROR); // ← ALWAYS 500
 }
 ```
 
@@ -70,18 +77,22 @@ replacing any validation error (400) with a generic 500. The validation checks a
 are effectively dead code: the correct status code never reaches the caller.
 
 **Fix**: distinguish `GenericException` from the generic catch:
+
 ```java
-} catch (GenericException e) {
-    throw e; // rethrow without wrapping
-} catch (Exception e) {
-    throw new GenericException(GenericException.GENERIC_ERROR);
+}catch(GenericException e){
+        throw e; // rethrow without wrapping
+}catch(
+Exception e){
+        throw new
+
+GenericException(GenericException.GENERIC_ERROR);
 }
 ```
 
 #### Critical Bug #2 — Invalid Seed Data (`FakeDatabase.java:15-20`)
 
 ```java
-user.setPhoneNumber("+39" + i); // i=0 → "+390", i=1 → "+391" …
+user.setPhoneNumber("+39"+i); // i=0 → "+390", i=1 → "+391" …
 ```
 
 Seed phone numbers are too short and do not comply with the Italian standard.
@@ -128,12 +139,12 @@ Zero Spring Security, no filters, no endpoint protection.
 
 ## 3. Tool Limitations Noted at Start
 
-| Limitation | Impact |
-|------------|--------|
-| No live code execution | Cannot verify compilation before making changes |
-| No in-session Maven integration | Cannot run `mvn test` directly — must ask the user |
-| Finite context window | On very large projects, earlier file reads may be evicted |
-| No access to runtime secrets | JWT secret key must remain a placeholder |
+| Limitation                      | Impact                                                    |
+|---------------------------------|-----------------------------------------------------------|
+| No live code execution          | Cannot verify compilation before making changes           |
+| No in-session Maven integration | Cannot run `mvn test` directly — must ask the user        |
+| Finite context window           | On very large projects, earlier file reads may be evicted |
+| No access to runtime secrets    | JWT secret key must remain a placeholder                  |
 
 ### Advantage Over Chat-Only Tools
 
@@ -156,13 +167,13 @@ is sound. Claude Code does not start from scratch but instead:
 
 ### Role Division
 
-| Responsibility | Claude Code | Developer |
-|----------------|-------------|-----------|
-| Codebase reading and analysis | Autonomous | — |
-| Boilerplate code generation | Autonomous | Review |
-| Compilation check (`mvn compile`) | Requires user approval | Execution |
-| Security decision review | Participates | Final decision |
-| Test coverage validation | Generates templates | Validates edge cases |
+| Responsibility                    | Claude Code            | Developer            |
+|-----------------------------------|------------------------|----------------------|
+| Codebase reading and analysis     | Autonomous             | —                    |
+| Boilerplate code generation       | Autonomous             | Review               |
+| Compilation check (`mvn compile`) | Requires user approval | Execution            |
+| Security decision review          | Participates           | Final decision       |
+| Test coverage validation          | Generates templates    | Validates edge cases |
 
 ---
 
