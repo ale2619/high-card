@@ -2,6 +2,7 @@ package it.sara.demo.web.user.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
 /**
@@ -13,6 +14,7 @@ import org.springframework.util.StringUtils;
  *   <li>TLD: at least 2 alphabetic characters</li>
  * </ul>
  */
+@Slf4j
 public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
 
     private static final String EMAIL_REGEX =
@@ -20,7 +22,9 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
+        log.debug("Validating email format for value [{}]", value);
         if (!StringUtils.hasText(value)) {
+            log.debug("Email validation failed — value is blank or null");
             return false;
         }
         return value.matches(EMAIL_REGEX);

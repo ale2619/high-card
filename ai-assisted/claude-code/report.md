@@ -117,6 +117,26 @@ from subclasses — fixed before wiring the service.
 A compilation error occurred on first build (`GenericResponse` symbol not found in
 `GetUsersAssembler`) due to a missing import — resolved immediately.
 
+### Pre-Phase-5 additions (custom exceptions, AOP, addUser response)
+
+```
+"Fa ritornare al metodo adduser del service l'oggetto creato con l'id associato [...];
+Aggiungere log di info e debug dove necessario senza sovraccaricare il codice,
+considerare se introdurre un aspect con aop"
+
+"nell'aggiungere aop vorrei che i log per il controller indichino quale chiamata è stata effettuata
+e che la risposta è stata fornita correttamente. per i service, validator ecc sempre log iniziali
+e log finali. Poi vorrei dei log di debug anche interni ai metodi"
+```
+
+Two-turn prompt: first established the requirements, second refined the AOP logging detail.
+The first version of `LoggingAspect` was rejected mid-write by the user to clarify logging
+expectations — a good example of iterative prompt refinement rather than a single large spec.
+
+Key decision: AOP cannot intercept `ConstraintValidator` implementations since they are called
+by Hibernate Validator outside Spring's proxy chain. Inline `@Slf4j` logs were added to the
+validators instead. This was noted in the aspect's Javadoc to avoid future confusion.
+
 ### Prompts for Remaining Implementation Phases *[TO BE ADDED]*
 
 Key prompts used during code generation will be documented here as phases are completed.

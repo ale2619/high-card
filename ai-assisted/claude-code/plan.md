@@ -207,6 +207,23 @@ All call sites refactored to use `Type.builder()...build()` instead of `new Type
 
 ---
 
+### ✅ PHASE 2.9 — Pre-Phase-5 additions (custom exceptions, AOP logging, addUser response)
+
+#### ✅ addUser returns created user
+`AddUserResult` and `AddUserResponse` now carry a `UserDTO user` field populated with the
+assigned GUID. `AddUserAssembler.toResponse()` builds the response via `@SuperBuilder`.
+Controller return type changed to `AddUserResponse`.
+
+#### ✅ AOP logging (`LoggingAspect`)
+- **Controllers** (INFO): logs `[HTTP_METHOD URI]` on entry and `OK [Xms]` on exit.
+  Uses `HttpServletRequest` from `RequestContextHolder` for accurate path info.
+- **Services** (INFO): logs method entry/exit with elapsed time via `@Around`.
+- **Inline debug logs** added to `UserServiceImpl`: field validation steps, email uniqueness
+  check, GUID after persist, search criteria and result counts.
+- **Validators** (`EmailValidator`, `ItalianPhoneNumberValidator`): `@Slf4j` + debug logs
+  on entry, blank check, and regex failure (AOP cannot intercept ConstraintValidator calls).
+- `spring-boot-starter-aop` added to `pom.xml`.
+
 ### ✅ PHASE 3 — Centralized Exception Handling
 
 **Complexity**: MEDIUM | **Depends on**: Phase 2
