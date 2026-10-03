@@ -2,8 +2,9 @@ package it.sara.demo.web.user;
 
 import it.sara.demo.exception.GenericException;
 import it.sara.demo.service.user.UserService;
-import it.sara.demo.service.user.criteria.CriteriaAddUser;
+import it.sara.demo.service.user.criteria.CriteriaGetUsers;
 import it.sara.demo.web.assembler.AddUserAssembler;
+import it.sara.demo.web.assembler.GetUsersAssembler;
 import it.sara.demo.web.response.GenericResponse;
 import it.sara.demo.web.user.request.AddUserRequest;
 import it.sara.demo.web.user.request.GetUsersRequest;
@@ -18,22 +19,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
     private final AddUserAssembler addUserAssembler;
+    private final GetUsersAssembler getUsersAssembler;
 
-    @PutMapping("/v1/user")
+    @PutMapping("/users")
     public ResponseEntity<GenericResponse> addUser(@Valid @RequestBody AddUserRequest request) throws GenericException {
-        CriteriaAddUser criteria = addUserAssembler.toCriteria(request);
-        userService.addUser(criteria);
+        userService.addUser(addUserAssembler.toCriteria(request));
         return ResponseEntity.ok(GenericResponse.success("User added."));
     }
 
-    @PostMapping("/v1/user")
-    public ResponseEntity<GetUsersResponse> getUsers(@RequestBody GetUsersRequest request) throws GenericException {
-        return ResponseEntity.ok().build();
+    @PostMapping("/users")
+    public ResponseEntity<GetUsersResponse> getUsers(@Valid @RequestBody GetUsersRequest request) throws GenericException {
+        CriteriaGetUsers criteria = getUsersAssembler.toCriteria(request);
+        GetUsersResponse response = getUsersAssembler.toResponse(userService.getUsers(criteria));
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,6 +1,7 @@
 package it.sara.demo.service.user.impl;
 
 import it.sara.demo.exception.GenericException;
+import it.sara.demo.service.assembler.UserAssembler;
 import it.sara.demo.service.database.UserRepository;
 import it.sara.demo.service.database.model.User;
 import it.sara.demo.service.user.UserService;
@@ -13,12 +14,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final UserAssembler userAssembler;
 
     @Override
     public AddUserResult addUser(CriteriaAddUser criteria) throws GenericException {
@@ -63,7 +67,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public GetUsersResult getUsers(CriteriaGetUsers criteriaGetUsers) throws GenericException {
-        return null;
+    public GetUsersResult getUsers(CriteriaGetUsers criteria) throws GenericException {
+        try {
+            List<User> users = userRepository.search(criteria);
+            int total = userRepository.count(criteria);
+
+            return GetUsersResult.builder()
+                    .total(total)
+                    .offset(criteria.getOffset())
+                    .limit(criteria.getLimit())
+                    .users(users.stream().map(userAssembler::toDTO).toList())
+                    .build();
+
+        } catch (Exception e) {
+            if (log.isErrorEnabled()) {
+                log.error(e.getMessage(), e);
+            }
+            throw new GenericException(GenericException.GENERIC_ERROR);
+        }
     }
 }

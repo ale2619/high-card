@@ -93,6 +93,30 @@ proceeding, preventing a regression where every valid input would have been reje
 Additionally applied IDE suggestions to replace `@RequestMapping(method = PUT/POST)` with
 `@PutMapping`/`@PostMapping`.
 
+### Pagination fields + builder rule (between Phase 4 and 5)
+
+```
+"Regola: usare builder se possibile e se tecnicamente corretto.
+Aggiungi campi di paginazione nel dto di risposta per gli user."
+```
+
+Two changes in one prompt: a standing rule and a concrete task.
+`@SuperBuilder` applied to the result hierarchy (`GenericResult` → `GenericPagedResult` → `GetUsersResult` / `AddUserResult`) since no static factory methods conflict. Response hierarchy (`GenericResponse` → `GenericPagedResponse` → `GetUsersResponse`) kept with setters — `@SuperBuilder` would require modifying `GenericResponse` which carries static factory methods, introducing risk.
+Added `offset`, `limit`, `pageCount` to `GenericPagedResponse`; `offset`/`limit` to `GenericPagedResult` so the service can propagate them. `pageCount` computed as `ceil(total / limit)` in the assembler.
+
+### Phase 4 — Pagination, Sorting and Search
+
+```
+"procedi con il prossimo step"
+```
+
+One additional bug was found during implementation: `CriteriaGetUsers.OrderType.BY_LASTNAME_DESC`
+had display name `"by lastName"` (duplicate of `BY_LASTNAME`) instead of `"by lastName desc"`.
+Also `GenericPagedResult.total` was private without getter/setter, making the field unreachable
+from subclasses — fixed before wiring the service.
+A compilation error occurred on first build (`GenericResponse` symbol not found in
+`GetUsersAssembler`) due to a missing import — resolved immediately.
+
 ### Prompts for Remaining Implementation Phases *[TO BE ADDED]*
 
 Key prompts used during code generation will be documented here as phases are completed.

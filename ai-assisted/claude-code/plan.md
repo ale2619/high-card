@@ -196,7 +196,10 @@ The project's custom `StringUtil.isNullOrEmpty()` was replaced with Spring's bui
 `StringUtils.hasText()` (inverse logic: `!StringUtils.hasText(x)` ≡ `isNullOrEmpty(x)`).
 `StringUtil.java` was deleted. No new dependency needed — `spring-core` is already on the classpath.
 
-#### ✅ 2.8 Builder Pattern (added during code review)
+#### ✅ 2.8 Builder Pattern — standing rule
+
+`@Builder` (or `@SuperBuilder` for inheritance chains) is preferred over `new Type()` + setters wherever technically correct.
+`@SuperBuilder` requires the annotation on all classes in the hierarchy; avoided on response classes whose base (`GenericResponse`) carries static factory methods.
 
 `@Builder` + `@NoArgsConstructor` + `@AllArgsConstructor` added to `StatusDTO`, `User`, `UserDTO`, `CriteriaAddUser`.
 All call sites refactored to use `Type.builder()...build()` instead of `new Type()` + setters.
@@ -248,7 +251,7 @@ public static GenericResponse error(StatusDTO status) { ...}
 
 ---
 
-### PHASE 4 — Pagination, Sorting and Search
+### ✅ PHASE 4 — Pagination, Sorting and Search
 
 **Complexity**: MEDIUM | **Depends on**: Phase 3
 
