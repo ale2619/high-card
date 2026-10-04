@@ -1,5 +1,11 @@
 package it.sara.demo.web.user;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import it.sara.demo.exception.GenericException;
 import it.sara.demo.service.user.UserService;
 import it.sara.demo.service.user.criteria.CriteriaGetUsers;
@@ -28,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
+@Tag(name = "Users", description = "User management — create and search users")
 public class UserController {
 
     private final UserService userService;
@@ -47,6 +54,17 @@ public class UserController {
      * @throws GenericException if a mandatory field is blank (code 400) or if the
      *                          repository fails to persist the entity (code 500)
      */
+    @Operation(
+            summary = "Create user",
+            description = "Creates a new user. Requires ADMIN role. Email must be a valid RFC 5322 address; phone number must comply with the Italian format. " +
+                    "HTTP is always 200; StatusDTO.code carries the outcome: 200 = success, 400 = validation failure (email/phone format or blank mandatory field), 500 = persistence error. " +
+                    "HTTP 403 is the only exception: when the authenticated user lacks the ADMIN role."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Always returned for authenticated ADMIN requests — inspect StatusDTO.code for the actual outcome",
+                    content = @Content(schema = @Schema(implementation = AddUserResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated user does not have ADMIN role, no response body")
+    })
     @PutMapping("/users")
     public ResponseEntity<AddUserResponse> addUser(@Valid @RequestBody AddUserRequest request) throws GenericException {
         AddUserResponse response = addUserAssembler.toResponse(userService.addUser(addUserAssembler.toCriteria(request)));
@@ -65,6 +83,14 @@ public class UserController {
      * @return a paginated user list wrapped in {@link GetUsersResponse}
      * @throws GenericException if an unexpected error occurs during the search (code 500)
      */
+    @Operation(
+            summary = "Search users",
+            description = "Returns a paginated list of users. The request body is optional — omitting it applies defaults (offset=0, limit=10, order=BY_LASTNAME). " +
+                    "The 'query' field performs a case-insensitive contains match on firstName, lastName, and email. " +
+                    "HTTP is always 200; StatusDTO.code carries the outcome: 200 = success, 400 = invalid pagination parameters, 500 = unexpected error."
+    )
+    @ApiResponse(responseCode = "200", description = "Always returned — inspect StatusDTO.code for the actual outcome",
+            content = @Content(schema = @Schema(implementation = GetUsersResponse.class)))
     @PostMapping("/users")
     public ResponseEntity<GetUsersResponse> getUsers(@Valid @RequestBody(required = false) GetUsersRequest request) throws GenericException {
         if (request == null) {

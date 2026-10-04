@@ -102,18 +102,30 @@ jwt:
 
 ```java
 // BEFORE (buggy)
-} catch(Exception e) {
-        log.error(e.getMessage(),e);
-        throw new GenericException(GenericException.GENERIC_ERROR);
+}catch(Exception e){
+        log.
+
+error(e.getMessage(),e);
+        throw new
+
+GenericException(GenericException.GENERIC_ERROR);
 }
 
 // AFTER (fixed)
-} catch(GenericException e) {
-        log.error(e.getMessage(),e);
+        }catch(
+GenericException e){
+        log.
+
+error(e.getMessage(),e);
         throw e;
-} catch(Exception e) {
-        log.error(e.getMessage(),e);
-        throw new GenericException(GenericException.GENERIC_ERROR);
+}catch(
+Exception e){
+        log.
+
+error(e.getMessage(),e);
+        throw new
+
+GenericException(GenericException.GENERIC_ERROR);
 }
 ```
 
@@ -383,15 +395,31 @@ Extends `OncePerRequestFilter`:
 
 ```java
 http
-    .csrf(AbstractHttpConfigurer::disable)
-    .sessionManagement(sm -> sm.sessionCreationPolicy(STATELESS))
-    .authorizeHttpRequests(auth ->auth
-        .requestMatchers("/auth/login")
-        .permitAll()
-        .anyRequest()
-        .authenticated()
+        .csrf(AbstractHttpConfigurer::disable)
+    .
+
+sessionManagement(sm ->sm.
+
+sessionCreationPolicy(STATELESS))
+        .
+
+authorizeHttpRequests(auth ->auth
+        .
+
+requestMatchers("/auth/login")
+        .
+
+permitAll()
+        .
+
+anyRequest()
+        .
+
+authenticated()
     )
-    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .
+
+addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter .class);
 ```
 
 ---
@@ -422,6 +450,35 @@ Priority classes:
 - `JwtTokenProvider` — validation logic documented
 - Validation annotations — expected regex and format
 - `FakeDatabase` — note that it is for demo purposes only
+
+### ✅ PHASE 6.5 — OpenAPI / Swagger UI
+
+**Complexity**: LOW | **Depends on**: Phase 5 (JWT security scheme), Phase 6 (Javadoc context)
+
+> **Prompt**: *"Aggiungi la dipendenza springdoc-openapi al progetto per esporre uno swagger con spec 2.8.9. Arricchisci
+i controller e i DTO principali con le annotazioni @Operation, @Schema e @ApiResponse. Configura il security scheme JWT
+nella UI in modo che si possa testare gli endpoint direttamente dal browser senza dover usare strumenti esterni."*
+
+#### Changes
+
+| File                                                | Change                                                                                                     |
+|-----------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| `pom.xml`                                           | `springdoc-openapi-starter-webmvc-ui:2.8.9`            |
+| `application.yml`                                   | `springdoc.api-docs.version: openapi_3_1` + `spring.main.allow-bean-definition-overriding: true`           |
+| `SecurityConfig`                                    | `permitAll()` on `/swagger-ui/**` and `/v3/api-docs/**`                                                    |
+| `config/OpenApiConfig`                              | New bean — title, version, global `bearerAuth` JWT security scheme                                         |
+| `AuthController`                                    | `@Tag`, `@Operation`, `@ApiResponses`, `@SecurityRequirements` (login is public)                           |
+| `UserController`                                    | `@Tag`, `@Operation`, `@ApiResponses` on both methods                                                      |
+| `StatusDTO`, `UserDTO`                              | `@Schema` on class and all fields with `description` + `example`                                           |
+| `LoginRequest`, `AddUserRequest`, `GetUsersRequest` | `@Schema` on class and all fields; `requiredMode` on mandatory fields; `@Schema` on `OrderType` enum values |
+
+#### Notes
+
+- `allow-bean-definition-overriding: true` needed because springdoc 2.8.9 and Spring Boot 3.5.0 both autoconfigure an
+  `ErrorMvcAutoConfiguration` bean with the same name.
+- `@SecurityRequirements` (empty) on `POST /auth/login` removes the padlock icon so the login endpoint is clearly marked
+  as public in the UI.
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html` | API docs JSON: `http://localhost:8080/v3/api-docs`
 
 ---
 

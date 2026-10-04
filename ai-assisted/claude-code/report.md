@@ -216,21 +216,22 @@ indistinguishable in the body. Added `error(int code, String message)` overload.
 
 **Test files created** (72 tests, 0 failures, `BUILD SUCCESS`):
 
-| File                              | Tests | Notes                                                                                       |
-|-----------------------------------|-------|---------------------------------------------------------------------------------------------|
-| `EmailValidatorTest`              | 13    | Direct instantiation, no Spring context                                                     |
-| `ItalianPhoneNumberValidatorTest` | 13    | Direct instantiation                                                                        |
-| `UserServiceImplTest`             | 10    | `@ExtendWith(MockitoExtension.class)`, mocked repo + assembler                              |
-| `UserRepositorySearchTest`        | 16    | FakeDatabase cleared/repopulated in `@BeforeEach` for isolation                             |
-| `JwtTokenProviderTest`            | 9     | `JwtProperties` passed via constructor; `@PostConstruct` invoked with `ReflectionTestUtils` |
-| `GlobalExceptionHandlerTest`      | 10    | Handler instantiated directly; `MethodArgumentNotValidException` mocked                     |
-| `UserAssemblerTest`               | 1     | Full `User → UserDTO` field mapping                                                         |
-| `AddUserAssemblerTest`            | 2     | `toCriteria` + `toResponse`, `StatusDTO.code` verified                                      |
+| File                              | Tests | Notes                                                                                                          |
+|-----------------------------------|-------|----------------------------------------------------------------------------------------------------------------|
+| `EmailValidatorTest`              | 13    | Direct instantiation, no Spring context                                                                        |
+| `ItalianPhoneNumberValidatorTest` | 13    | Direct instantiation                                                                                           |
+| `UserServiceImplTest`             | 10    | `@ExtendWith(MockitoExtension.class)`, mocked repo + assembler                                                 |
+| `UserRepositorySearchTest`        | 16    | FakeDatabase cleared/repopulated in `@BeforeEach` for isolation                                                |
+| `JwtTokenProviderTest`            | 9     | `JwtProperties` passed via constructor; `@PostConstruct` invoked with `ReflectionTestUtils`                    |
+| `GlobalExceptionHandlerTest`      | 10    | Handler instantiated directly; `MethodArgumentNotValidException` mocked                                        |
+| `UserAssemblerTest`               | 1     | Full `User → UserDTO` field mapping                                                                            |
+| `AddUserAssemblerTest`            | 2     | `toCriteria` + `toResponse`, `StatusDTO.code` verified                                                         |
 | `GetUsersAssemblerTest`           | 10    | All pagination fields, all `OrderType` values, `pageCount` edge cases (zero divisor, exact/non-exact multiple) |
 
 Total: **85 tests, 0 failures**.
 
-Assertion style: `assertTrue`/`assertFalse`/`assertEquals`/`assertNotNull` (JUnit 5) for scalar values; AssertJ (`hasSize`, `contains`, `extracting`) kept for collection and multi-part string assertions.
+Assertion style: `assertTrue`/`assertFalse`/`assertEquals`/`assertNotNull` (JUnit 5) for scalar values; AssertJ (
+`hasSize`, `contains`, `extracting`) kept for collection and multi-part string assertions.
 
 **Issue encountered**: First draft of `JwtTokenProviderTest` used `new JwtTokenProvider()` (no-args), which failed
 because the user had refactored `JwtTokenProvider` to use `@RequiredArgsConstructor` with `JwtProperties`. Fixed by
@@ -239,9 +240,59 @@ constructing `JwtProperties` directly and passing it to the constructor.
 **Javadoc added** to: `UserController` (class + 2 methods), `UserServiceImpl` (class + 2 methods), `FakeDatabase` (
 class).
 
-### Prompts for Remaining Implementation Phases *[TO BE ADDED]*
+### Phase 6.5 — OpenAPI / Swagger UI
 
-Key prompts used during code generation will be documented here as phases are completed.
+```
+"Aggiungi la documentazione OpenAPI 3.1 all'applicazione usando springdoc.
+Documenta tutti gli endpoint, i DTO di request/response e lo schema di sicurezza JWT.
+Assicurati che lo Swagger UI sia accessibile e che le annotazioni siano accurate
+rispetto al comportamento reale degli endpoint."
+```
+
+**Files added / modified**:
+
+| File                                                            | Change                                                                          |
+|-----------------------------------------------------------------|---------------------------------------------------------------------------------|
+| `pom.xml`                                                       | Added `springdoc-openapi-starter-webmvc-ui:2.8.9`                               |
+| `config/OpenApiConfig.java`                                     | New — global `bearerAuth` JWT security scheme, API title/version                |
+| `application.yml`                                               | Added `springdoc.*` block; `spring.main.allow-bean-definition-overriding: true` |
+| `security/SecurityConfig.java`                                  | `permitAll()` on `/swagger-ui/**`, `/v3/api-docs/**`                            |
+| `web/auth/AuthController.java`                                  | `@Tag`, `@Operation`, `@ApiResponse`, `@SecurityRequirements`                   |
+| `web/user/UserController.java`                                  | `@Tag`, `@Operation`, `@ApiResponses`                                           |
+| `dto/StatusDTO.java`, `UserDTO.java`                            | `@Schema` on class and all fields                                               |
+| `web/auth/request/LoginRequest.java`, `web/user/request/*.java` | `@Schema` with `requiredMode`, examples                                         |
+
+**Critical discovery — springdoc version matrix**:
+
+springdoc uses a *different major version* per Spring Boot major. Initial attempt used
+`3.1.0` (wrongly assuming latest = best). This pulled `spring-webmvc:4.1.0` (Spring Boot 4.x)
+into a Spring Boot 3.5.0 project, causing:
+
+```
+BeanDefinitionOverrideException: Invalid bean definition with name 'requestMappingHandlerMapping'
+NoClassDefFoundError: org/springframework/boot/web/error/ErrorPageRegistrar
+```
+
+**Fix**: downgraded to `2.8.9` (latest stable 2.x release, compatible with Spring Boot 3.x).
+Added `spring.main.allow-bean-definition-overriding: true` to suppress a residual bean name
+conflict between springdoc's `requestMappingHandlerMapping` and Spring MVC's own registration.
+
+**`@ApiResponse` accuracy fix**:
+
+After the Swagger UI was live, the user noticed it declared `responseCode="400"` as a possible
+HTTP status — which never actually occurs. The project convention is that *all* responses return
+HTTP 200; only `StatusDTO.code` in the body carries the semantic outcome (200, 400, 401, 500).
+
+Fix: removed all `responseCode="400"` / `responseCode="500"` `@ApiResponse` entries. Each
+endpoint now declares only `responseCode="200"` (with description explaining `StatusDTO.code`
+values) plus `responseCode="403"` on `addUser` — the sole genuine Spring Security HTTP 403,
+raised *before* the controller runs, that cannot be normalised to 200.
+
+`@SecurityRequirements` (empty annotation) was added to `AuthController.login()` to mark the
+login endpoint as public in the Swagger UI lock icon, since the global `bearerAuth` scheme would
+otherwise incorrectly show it as requiring a token.
+
+**Final state**: **85 tests, 0 failures, BUILD SUCCESS** (unchanged — Phase 6.5 added no new tests).
 
 ---
 
