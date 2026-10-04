@@ -137,6 +137,56 @@ Key decision: AOP cannot intercept `ConstraintValidator` implementations since t
 by Hibernate Validator outside Spring's proxy chain. Inline `@Slf4j` logs were added to the
 validators instead. This was noted in the aspect's Javadoc to avoid future confusion.
 
+### Phase 5 — JWT Authentication
+
+```
+"procedi con il prossimo step"
+```
+
+No issues during implementation. jjwt 0.13.0 API was used correctly (`Jwts.parser()`,
+`.verifyWith()`, `.requireIssuer()`, `.parseSignedClaims()`). All 4 validations implemented:
+signature (HMAC-SHA256), issuer, expiration (handled by jjwt), policy (role in allowed-roles).
+`application.yml` updated to use YAML list syntax for `allowed-roles` to enable clean
+`List<String>` injection via `@Value`.
+
+### Security review and refactoring (post Phase 5)
+
+```
+"Voglio fare un po' di security review [...] Sulla base delle tue riflessioni,
+proponimi un refactoring guidato del codice esistente motivando le scelte architetturali."
+```
+
+Three-point review prompted by the user after Phase 5. The prompt asked for analysis *before* implementation, resulting in a discussion-then-code flow rather than the usual minimal "procedi" trigger.
+
+Key decisions made during this refactoring:
+1. **`PasswordEncoder`**: `BCryptPasswordEncoder` bean added to `SecurityConfig`. `AuthController` encodes the raw config password once at startup (`@PostConstruct`) and compares with `passwordEncoder.matches()`. The `@PostConstruct` step would disappear in production where the config value would already be hashed.
+2. **Single JWT parse**: `validateToken(boolean)` → `validateAndExtractClaims(Optional<Claims>)`. The filter now calls this once and reads username + role from the returned claims — eliminating 3 HMAC-SHA256 verifications per request.
+3. **`signingKey()` caching**: Moved from on-every-call computation to `@PostConstruct` cache — `Keys.hmacShaKeyFor()` now runs once at startup.
+4. **ROLE_ prefix documentation**: The existing approach (`ROLE_` + role in filter, `hasRole()` in config) is correct Spring Security 6 convention. Added inline comment in filter to prevent future `hasAuthority("USER")` mistakes.
+
+### UserDetailsService + AuthenticationManager refactoring
+
+```
+"Vorrei rifattorizzare il modulo di sicurezza per eliminare la gestione manuale
+delle password in AuthController e supportare un numero arbitrario di utenti
+(sia utenti semplici che admin). [...] Rimuovi completamente i campi @Value,
+@PostConstruct e passwordEncoder.matches()."
+```
+
+Key decisions:
+- **`InMemoryUserDetailsManager`**: two accounts (`user/user123` USER, `admin/admin123` ADMIN) with passwords BCrypt-encoded inline at bean creation — avoids pre-computed hash strings in config files.
+- **`AuthenticationManager` delegation**: `authenticationManager.authenticate()` handles all credential validation — `AuthController` no longer touches `PasswordEncoder` directly.
+- **Role extraction**: `Authentication.getAuthorities()` returns `ROLE_ADMIN` etc. (Spring adds prefix via `.roles()`); the controller strips `ROLE_` before passing to `generateToken()` to keep JWT claims consistent with `jwt.allowed-roles`.
+- **HTTP status on failure**: Originally returned `401 Unauthorized` at transport level; subsequently corrected to `200 OK` (body `StatusDTO.code = 401`) to comply with the README requirement that *all* responses return HTTP 200. The semantic code in the body still communicates the unauthorized outcome.
+- **`application.yml` cleanup**: `auth.username` / `auth.password` properties removed — credentials are now code-level configuration in `SecurityConfig`.
+
+### `GenericResponse` error codes + `GlobalExceptionHandler` correction
+
+`GenericResponse.error(String)` was hardcoding `StatusDTO.code = 200` for all errors — making success and failure indistinguishable in the body. Added `error(int code, String message)` overload. Updated:
+- `GlobalExceptionHandler.handleValidation` → code 400
+- `GlobalExceptionHandler.handleUnexpected` → code 500, message from exception
+- `AuthController` `BadCredentialsException` handler → code 401, message from exception, HTTP 200
+
 ### Prompts for Remaining Implementation Phases *[TO BE ADDED]*
 
 Key prompts used during code generation will be documented here as phases are completed.

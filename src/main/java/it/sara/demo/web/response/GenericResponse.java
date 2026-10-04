@@ -27,9 +27,13 @@ public class GenericResponse {
     }
 
     public static GenericResponse error(String message) {
+        return error(500, message);
+    }
+
+    public static GenericResponse error(int code, String message) {
         GenericResponse response = new GenericResponse();
         response.setStatus(StatusDTO.builder()
-                .code(200)
+                .code(code)
                 .message(message)
                 .traceId(UUID.randomUUID().toString())
                 .build());

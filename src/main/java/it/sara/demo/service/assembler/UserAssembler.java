@@ -13,6 +13,7 @@ public class UserAssembler {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
                 .build();
     }
 }

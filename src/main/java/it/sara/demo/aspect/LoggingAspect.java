@@ -33,7 +33,7 @@ public class LoggingAspect {
         log.info("Request - [{} {}]", httpMethod, uri);
         long start = System.currentTimeMillis();
         Object result = pjp.proceed();
-        log.info("Response - [{} {}] — OK [{}ms]", httpMethod, uri, System.currentTimeMillis() - start);
+        log.info("Response - [{} {}] - [{}ms]", httpMethod, uri, System.currentTimeMillis() - start);
         return result;
     }
 
