@@ -101,8 +101,12 @@ Aggiungi campi di paginazione nel dto di risposta per gli user."
 ```
 
 Two changes in one prompt: a standing rule and a concrete task.
-`@SuperBuilder` applied to the result hierarchy (`GenericResult` → `GenericPagedResult` → `GetUsersResult` / `AddUserResult`) since no static factory methods conflict. Response hierarchy (`GenericResponse` → `GenericPagedResponse` → `GetUsersResponse`) kept with setters — `@SuperBuilder` would require modifying `GenericResponse` which carries static factory methods, introducing risk.
-Added `offset`, `limit`, `pageCount` to `GenericPagedResponse`; `offset`/`limit` to `GenericPagedResult` so the service can propagate them. `pageCount` computed as `ceil(total / limit)` in the assembler.
+`@SuperBuilder` applied to the result hierarchy (`GenericResult` → `GenericPagedResult` → `GetUsersResult` /
+`AddUserResult`) since no static factory methods conflict. Response hierarchy (`GenericResponse` →
+`GenericPagedResponse` → `GetUsersResponse`) kept with setters — `@SuperBuilder` would require modifying
+`GenericResponse` which carries static factory methods, introducing risk.
+Added `offset`, `limit`, `pageCount` to `GenericPagedResponse`; `offset`/`limit` to `GenericPagedResult` so the service
+can propagate them. `pageCount` computed as `ceil(total / limit)` in the assembler.
 
 ### Phase 4 — Pagination, Sorting and Search
 
@@ -156,13 +160,20 @@ signature (HMAC-SHA256), issuer, expiration (handled by jjwt), policy (role in a
 proponimi un refactoring guidato del codice esistente motivando le scelte architetturali."
 ```
 
-Three-point review prompted by the user after Phase 5. The prompt asked for analysis *before* implementation, resulting in a discussion-then-code flow rather than the usual minimal "procedi" trigger.
+Three-point review prompted by the user after Phase 5. The prompt asked for analysis *before* implementation, resulting
+in a discussion-then-code flow rather than the usual minimal "procedi" trigger.
 
 Key decisions made during this refactoring:
-1. **`PasswordEncoder`**: `BCryptPasswordEncoder` bean added to `SecurityConfig`. `AuthController` encodes the raw config password once at startup (`@PostConstruct`) and compares with `passwordEncoder.matches()`. The `@PostConstruct` step would disappear in production where the config value would already be hashed.
-2. **Single JWT parse**: `validateToken(boolean)` → `validateAndExtractClaims(Optional<Claims>)`. The filter now calls this once and reads username + role from the returned claims — eliminating 3 HMAC-SHA256 verifications per request.
-3. **`signingKey()` caching**: Moved from on-every-call computation to `@PostConstruct` cache — `Keys.hmacShaKeyFor()` now runs once at startup.
-4. **ROLE_ prefix documentation**: The existing approach (`ROLE_` + role in filter, `hasRole()` in config) is correct Spring Security 6 convention. Added inline comment in filter to prevent future `hasAuthority("USER")` mistakes.
+
+1. **`PasswordEncoder`**: `BCryptPasswordEncoder` bean added to `SecurityConfig`. `AuthController` encodes the raw
+   config password once at startup (`@PostConstruct`) and compares with `passwordEncoder.matches()`. The
+   `@PostConstruct` step would disappear in production where the config value would already be hashed.
+2. **Single JWT parse**: `validateToken(boolean)` → `validateAndExtractClaims(Optional<Claims>)`. The filter now calls
+   this once and reads username + role from the returned claims — eliminating 3 HMAC-SHA256 verifications per request.
+3. **`signingKey()` caching**: Moved from on-every-call computation to `@PostConstruct` cache — `Keys.hmacShaKeyFor()`
+   now runs once at startup.
+4. **ROLE_ prefix documentation**: The existing approach (`ROLE_` + role in filter, `hasRole()` in config) is correct
+   Spring Security 6 convention. Added inline comment in filter to prevent future `hasAuthority("USER")` mistakes.
 
 ### UserDetailsService + AuthenticationManager refactoring
 
@@ -174,18 +185,59 @@ delle password in AuthController e supportare un numero arbitrario di utenti
 ```
 
 Key decisions:
-- **`InMemoryUserDetailsManager`**: two accounts (`user/user123` USER, `admin/admin123` ADMIN) with passwords BCrypt-encoded inline at bean creation — avoids pre-computed hash strings in config files.
-- **`AuthenticationManager` delegation**: `authenticationManager.authenticate()` handles all credential validation — `AuthController` no longer touches `PasswordEncoder` directly.
-- **Role extraction**: `Authentication.getAuthorities()` returns `ROLE_ADMIN` etc. (Spring adds prefix via `.roles()`); the controller strips `ROLE_` before passing to `generateToken()` to keep JWT claims consistent with `jwt.allowed-roles`.
-- **HTTP status on failure**: Originally returned `401 Unauthorized` at transport level; subsequently corrected to `200 OK` (body `StatusDTO.code = 401`) to comply with the README requirement that *all* responses return HTTP 200. The semantic code in the body still communicates the unauthorized outcome.
-- **`application.yml` cleanup**: `auth.username` / `auth.password` properties removed — credentials are now code-level configuration in `SecurityConfig`.
+
+- **`InMemoryUserDetailsManager`**: two accounts (`user/user123` USER, `admin/admin123` ADMIN) with passwords
+  BCrypt-encoded inline at bean creation — avoids pre-computed hash strings in config files.
+- **`AuthenticationManager` delegation**: `authenticationManager.authenticate()` handles all credential validation —
+  `AuthController` no longer touches `PasswordEncoder` directly.
+- **Role extraction**: `Authentication.getAuthorities()` returns `ROLE_ADMIN` etc. (Spring adds prefix via `.roles()`);
+  the controller strips `ROLE_` before passing to `generateToken()` to keep JWT claims consistent with
+  `jwt.allowed-roles`.
+- **HTTP status on failure**: Originally returned `401 Unauthorized` at transport level; subsequently corrected to
+  `200 OK` (body `StatusDTO.code = 401`) to comply with the README requirement that *all* responses return HTTP 200. The
+  semantic code in the body still communicates the unauthorized outcome.
+- **`application.yml` cleanup**: `auth.username` / `auth.password` properties removed — credentials are now code-level
+  configuration in `SecurityConfig`.
 
 ### `GenericResponse` error codes + `GlobalExceptionHandler` correction
 
-`GenericResponse.error(String)` was hardcoding `StatusDTO.code = 200` for all errors — making success and failure indistinguishable in the body. Added `error(int code, String message)` overload. Updated:
+`GenericResponse.error(String)` was hardcoding `StatusDTO.code = 200` for all errors — making success and failure
+indistinguishable in the body. Added `error(int code, String message)` overload. Updated:
+
 - `GlobalExceptionHandler.handleValidation` → code 400
 - `GlobalExceptionHandler.handleUnexpected` → code 500, message from exception
 - `AuthController` `BadCredentialsException` handler → code 401, message from exception, HTTP 200
+
+### Phase 6 — Tests and Javadoc
+
+```
+"procedi con il prossimo step"
+```
+
+**Test files created** (72 tests, 0 failures, `BUILD SUCCESS`):
+
+| File                              | Tests | Notes                                                                                       |
+|-----------------------------------|-------|---------------------------------------------------------------------------------------------|
+| `EmailValidatorTest`              | 13    | Direct instantiation, no Spring context                                                     |
+| `ItalianPhoneNumberValidatorTest` | 13    | Direct instantiation                                                                        |
+| `UserServiceImplTest`             | 10    | `@ExtendWith(MockitoExtension.class)`, mocked repo + assembler                              |
+| `UserRepositorySearchTest`        | 16    | FakeDatabase cleared/repopulated in `@BeforeEach` for isolation                             |
+| `JwtTokenProviderTest`            | 9     | `JwtProperties` passed via constructor; `@PostConstruct` invoked with `ReflectionTestUtils` |
+| `GlobalExceptionHandlerTest`      | 10    | Handler instantiated directly; `MethodArgumentNotValidException` mocked                     |
+| `UserAssemblerTest`               | 1     | Full `User → UserDTO` field mapping                                                         |
+| `AddUserAssemblerTest`            | 2     | `toCriteria` + `toResponse`, `StatusDTO.code` verified                                      |
+| `GetUsersAssemblerTest`           | 10    | All pagination fields, all `OrderType` values, `pageCount` edge cases (zero divisor, exact/non-exact multiple) |
+
+Total: **85 tests, 0 failures**.
+
+Assertion style: `assertTrue`/`assertFalse`/`assertEquals`/`assertNotNull` (JUnit 5) for scalar values; AssertJ (`hasSize`, `contains`, `extracting`) kept for collection and multi-part string assertions.
+
+**Issue encountered**: First draft of `JwtTokenProviderTest` used `new JwtTokenProvider()` (no-args), which failed
+because the user had refactored `JwtTokenProvider` to use `@RequiredArgsConstructor` with `JwtProperties`. Fixed by
+constructing `JwtProperties` directly and passing it to the constructor.
+
+**Javadoc added** to: `UserController` (class + 2 methods), `UserServiceImpl` (class + 2 methods), `FakeDatabase` (
+class).
 
 ### Prompts for Remaining Implementation Phases *[TO BE ADDED]*
 

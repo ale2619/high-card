@@ -102,30 +102,18 @@ jwt:
 
 ```java
 // BEFORE (buggy)
-}catch(Exception e){
-        log.
-
-error(e.getMessage(),e);
-        throw new
-
-GenericException(GenericException.GENERIC_ERROR);
+} catch(Exception e) {
+        log.error(e.getMessage(),e);
+        throw new GenericException(GenericException.GENERIC_ERROR);
 }
 
 // AFTER (fixed)
-        }catch(
-GenericException e){
-        log.
-
-error(e.getMessage(),e);
+} catch(GenericException e) {
+        log.error(e.getMessage(),e);
         throw e;
-}catch(
-Exception e){
-        log.
-
-error(e.getMessage(),e);
-        throw new
-
-GenericException(GenericException.GENERIC_ERROR);
+} catch(Exception e) {
+        log.error(e.getMessage(),e);
+        throw new GenericException(GenericException.GENERIC_ERROR);
 }
 ```
 
@@ -198,8 +186,10 @@ The project's custom `StringUtil.isNullOrEmpty()` was replaced with Spring's bui
 
 #### ✅ 2.8 Builder Pattern — standing rule
 
-`@Builder` (or `@SuperBuilder` for inheritance chains) is preferred over `new Type()` + setters wherever technically correct.
-`@SuperBuilder` requires the annotation on all classes in the hierarchy; avoided on response classes whose base (`GenericResponse`) carries static factory methods.
+`@Builder` (or `@SuperBuilder` for inheritance chains) is preferred over `new Type()` + setters wherever technically
+correct.
+`@SuperBuilder` requires the annotation on all classes in the hierarchy; avoided on response classes whose base (
+`GenericResponse`) carries static factory methods.
 
 `@Builder` + `@NoArgsConstructor` + `@AllArgsConstructor` added to `StatusDTO`, `User`, `UserDTO`, `CriteriaAddUser`.
 All call sites refactored to use `Type.builder()...build()` instead of `new Type()` + setters.
@@ -210,11 +200,13 @@ All call sites refactored to use `Type.builder()...build()` instead of `new Type
 ### ✅ PHASE 2.9 — Pre-Phase-5 additions (custom exceptions, AOP logging, addUser response)
 
 #### ✅ addUser returns created user
+
 `AddUserResult` and `AddUserResponse` now carry a `UserDTO user` field populated with the
 assigned GUID. `AddUserAssembler.toResponse()` builds the response via `@SuperBuilder`.
 Controller return type changed to `AddUserResponse`.
 
 #### ✅ AOP logging (`LoggingAspect`)
+
 - **Controllers** (INFO): logs `[HTTP_METHOD URI]` on entry and `OK [Xms]` on exit.
   Uses `HttpServletRequest` from `RequestContextHolder` for accurate path info.
 - **Services** (INFO): logs method entry/exit with elapsed time via `@Around`.
@@ -343,29 +335,36 @@ security/jwt/
 String generateToken(String username, String role)
 
 Optional<Claims> validateAndExtractClaims(String token)   // single parse: signature + expiration + issuer + policy
-                                                           // returns empty Optional if invalid
+// returns empty Optional if invalid
 ```
 
 **Security refactoring applied post-Phase-5 (round 1)**:
-- `validateToken(boolean)` replaced by `validateAndExtractClaims(Optional<Claims>)` — eliminates 3-parse-per-request pattern in the filter
+
+- `validateToken(boolean)` replaced by `validateAndExtractClaims(Optional<Claims>)` — eliminates 3-parse-per-request
+  pattern in the filter
 - `signingKey()` removed; key cached in `cachedSigningKey` via `@PostConstruct`
 - `PasswordEncoder` (BCrypt) bean added to `SecurityConfig`
 
 **Security refactoring applied post-Phase-5 (round 2 — UserDetailsService)**:
-- `InMemoryUserDetailsManager` registered in `SecurityConfig` with two accounts: `user/user123` (USER) and `admin/admin123` (ADMIN); passwords BCrypt-encoded inline
+
+- `InMemoryUserDetailsManager` registered in `SecurityConfig` with two accounts: `user/user123` (USER) and
+  `admin/admin123` (ADMIN); passwords BCrypt-encoded inline
 - `AuthenticationManager` bean exposed via `AuthenticationConfiguration`
-- `AuthController` completely rewritten: `@Value` fields, `@PostConstruct`, `PasswordEncoder` and manual `passwordEncoder.matches()` removed; credential verification delegated to `authenticationManager.authenticate()`
+- `AuthController` completely rewritten: `@Value` fields, `@PostConstruct`, `PasswordEncoder` and manual
+  `passwordEncoder.matches()` removed; credential verification delegated to `authenticationManager.authenticate()`
 - Role extracted from `Authentication.getAuthorities()` post-login, `ROLE_` prefix stripped before embedding in JWT
-- Login failure returns HTTP `401 Unauthorized` — only endpoint deviating from the project's HTTP-200-for-all-errors convention, justified because authentication failure is a transport-level concern
+- Login failure returns HTTP `401 Unauthorized` — only endpoint deviating from the project's HTTP-200-for-all-errors
+  convention, justified because authentication failure is a transport-level concern
 - `auth.username` / `auth.password` properties removed from `application.yml`
 
 **Required validations**:
-| Validation | jjwt method |
-|------------|-------------|
-| Signature (HMAC-SHA256) | `verifyWith(secretKey)` |
-| Issuer | `.requireIssuer("high-card-app")` |
-| Expiration | `.requireExpiration()` (jjwt default) |
-| Policy/role | check claim `role` ∈ `{USER, ADMIN}` |
+
+| Validation              | jjwt method                           |
+|-------------------------|---------------------------------------|
+| Signature (HMAC-SHA256) | `verifyWith(secretKey)`               |
+| Issuer                  | `.requireIssuer("high-card-app")`     |
+| Expiration              | `.requireExpiration()` (jjwt default) |
+| Policy/role             | check claim `role` ∈ `{USER, ADMIN}`  |
 
 #### 5.2 `AuthController` + `POST /auth/login`
 
@@ -384,35 +383,20 @@ Extends `OncePerRequestFilter`:
 
 ```java
 http
-        .csrf(AbstractHttpConfigurer::disable)
-  .
-
-sessionManagement(sm ->sm.
-
-sessionCreationPolicy(STATELESS))
-        .
-
-authorizeHttpRequests(auth ->auth
-        .
-
-requestMatchers("/auth/login").
-
-permitAll()
-      .
-
-anyRequest().
-
-authenticated()
-  )
-          .
-
-addFilterBefore(jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter .class);
+    .csrf(AbstractHttpConfigurer::disable)
+    .sessionManagement(sm -> sm.sessionCreationPolicy(STATELESS))
+    .authorizeHttpRequests(auth ->auth
+        .requestMatchers("/auth/login")
+        .permitAll()
+        .anyRequest()
+        .authenticated()
+    )
+    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 ```
 
 ---
 
-### PHASE 6 — Testing and Documentation
+### ✅ PHASE 6 — Testing and Documentation
 
 **Complexity**: MEDIUM | **Depends on**: Phases 2–5
 
