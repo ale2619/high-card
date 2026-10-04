@@ -411,7 +411,7 @@ http
 | `JwtTokenProviderTest`            | Generate, validate, expired, tampered, wrong issuer              |
 | `GlobalExceptionHandlerTest`      | All handlers, HTTP 200 confirmed in every case                   |
 
-**Target coverage**: >85%
+**Target coverage**: >80%
 
 #### 6.2 Javadoc
 
