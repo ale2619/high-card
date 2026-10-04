@@ -34,7 +34,10 @@ public class UserController {
     }
 
     @PostMapping("/users")
-    public ResponseEntity<GetUsersResponse> getUsers(@Valid @RequestBody GetUsersRequest request) throws GenericException {
+    public ResponseEntity<GetUsersResponse> getUsers(@Valid @RequestBody(required = false) GetUsersRequest request) throws GenericException {
+        if (request == null) {
+            request = new GetUsersRequest(); // Default request if none provided
+        }
         CriteriaGetUsers criteria = getUsersAssembler.toCriteria(request);
         return ResponseEntity.ok(getUsersAssembler.toResponse(userService.getUsers(criteria)));
     }

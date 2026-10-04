@@ -31,6 +31,7 @@ public class GlobalExceptionHandler {
     /**
      * Handles bean validation failures ({@code @Valid} on request bodies).
      * Aggregates all field violation messages into a single response.
+     * StatusDTO code 400 mirrors the HTTP Bad Request semantic in the body.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<GenericResponse> handleValidation(MethodArgumentNotValidException e) {
@@ -38,15 +39,16 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         log.error("Validation error: {}", message);
-        return ResponseEntity.ok(GenericResponse.error(message));
+        return ResponseEntity.ok(GenericResponse.error(400, message));
     }
 
     /**
      * Catch-all handler for any unexpected exception.
+     * StatusDTO code 500 mirrors the HTTP Internal Server Error semantic in the body.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<GenericResponse> handleUnexpected(Exception e) {
         log.error("Unexpected error: {}", e.getMessage(), e);
-        return ResponseEntity.ok(GenericResponse.error("Unexpected error"));
+        return ResponseEntity.ok(GenericResponse.error(500, e.getMessage()));
     }
 }

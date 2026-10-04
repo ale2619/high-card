@@ -23,6 +23,10 @@ public class GetUsersRequest extends GenericRequest {
     @NotNull(message = "Order type is required")
     private OrderType order;
 
+    public GetUsersRequest() {
+        this.order = OrderType.BY_LASTNAME;
+    }
+
     public enum OrderType {
         BY_FIRSTNAME,
         BY_FIRSTNAME_DESC,

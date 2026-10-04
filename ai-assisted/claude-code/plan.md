@@ -324,7 +324,7 @@ Wire controller → service → repository using the criteria pattern.
 
 ---
 
-### PHASE 5 — JWT Authentication
+### ✅ PHASE 5 — JWT Authentication
 
 **Complexity**: MEDIUM-HIGH | **Depends on**: Phase 3
 
@@ -342,12 +342,22 @@ security/jwt/
 ```java
 String generateToken(String username, String role)
 
-boolean validateToken(String token)      // signature + expiration + issuer + policy
-
-String extractUsername(String token)
-
-Claims extractAllClaims(String token)
+Optional<Claims> validateAndExtractClaims(String token)   // single parse: signature + expiration + issuer + policy
+                                                           // returns empty Optional if invalid
 ```
+
+**Security refactoring applied post-Phase-5 (round 1)**:
+- `validateToken(boolean)` replaced by `validateAndExtractClaims(Optional<Claims>)` — eliminates 3-parse-per-request pattern in the filter
+- `signingKey()` removed; key cached in `cachedSigningKey` via `@PostConstruct`
+- `PasswordEncoder` (BCrypt) bean added to `SecurityConfig`
+
+**Security refactoring applied post-Phase-5 (round 2 — UserDetailsService)**:
+- `InMemoryUserDetailsManager` registered in `SecurityConfig` with two accounts: `user/user123` (USER) and `admin/admin123` (ADMIN); passwords BCrypt-encoded inline
+- `AuthenticationManager` bean exposed via `AuthenticationConfiguration`
+- `AuthController` completely rewritten: `@Value` fields, `@PostConstruct`, `PasswordEncoder` and manual `passwordEncoder.matches()` removed; credential verification delegated to `authenticationManager.authenticate()`
+- Role extracted from `Authentication.getAuthorities()` post-login, `ROLE_` prefix stripped before embedding in JWT
+- Login failure returns HTTP `401 Unauthorized` — only endpoint deviating from the project's HTTP-200-for-all-errors convention, justified because authentication failure is a transport-level concern
+- `auth.username` / `auth.password` properties removed from `application.yml`
 
 **Required validations**:
 | Validation | jjwt method |
