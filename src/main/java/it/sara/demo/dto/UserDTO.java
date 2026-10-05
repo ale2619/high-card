@@ -24,7 +24,7 @@ public class UserDTO {
     @Schema(description = "User's last name", example = "Rossi")
     private String lastName;
 
-    @Schema(description = "Email address — unique within the system", example = "mario.rossi@example.com")
+    @Schema(description = "Email address", example = "mario.rossi@example.com")
     private String email;
 
     @Schema(description = "Italian phone number — mobile (3XXXXXXXXX / +393XXXXXXXXX) or landline (+390XXXXXXXXX)", example = "+393331234567")

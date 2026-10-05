@@ -12,7 +12,7 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Outcome descriptor included in every response body. HTTP transport is always 200; the semantic result is carried here.")
+@Schema(description = "Outcome descriptor included in every response body. HTTP status code is carried here.")
 public class StatusDTO {
 
     @Schema(description = "Semantic HTTP-equivalent status code: 200 = success, 400 = bad request, 401 = unauthorized, 404 = not found, 500 = internal error", example = "200")
