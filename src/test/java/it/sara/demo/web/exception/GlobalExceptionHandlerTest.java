@@ -35,26 +35,26 @@ class GlobalExceptionHandlerTest {
         handler = new GlobalExceptionHandler();
     }
 
-    // --- all responses must be HTTP 200 ---
+    // --- HTTP status mirrors the semantic error code ---
 
     @Test
-    void handleGenericException_alwaysReturnsHttp200() {
+    void handleGenericException_httpStatusMatchesExceptionCode() {
         ResponseEntity<GenericResponse> response = handler.handleGenericException(new GenericException(404, "Not found"));
-        assertEquals(200, response.getStatusCode().value());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test
-    void handleValidation_alwaysReturnsHttp200() {
+    void handleValidation_returnsHttp400() {
         when(validationException.getBindingResult()).thenReturn(bindingResult);
         when(bindingResult.getFieldErrors()).thenReturn(
                 List.of(new FieldError("obj", "email", "Invalid email address"))
         );
-        assertEquals(200, handler.handleValidation(validationException).getStatusCode().value());
+        assertEquals(400, handler.handleValidation(validationException).getStatusCode().value());
     }
 
     @Test
-    void handleUnexpected_alwaysReturnsHttp200() {
-        assertEquals(200, handler.handleUnexpected(new RuntimeException("boom")).getStatusCode().value());
+    void handleUnexpected_returnsHttp500() {
+        assertEquals(500, handler.handleUnexpected(new RuntimeException("boom")).getStatusCode().value());
     }
 
     // --- status code in body reflects the semantic error ---

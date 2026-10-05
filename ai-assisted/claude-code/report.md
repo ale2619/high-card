@@ -284,15 +284,52 @@ HTTP status — which never actually occurs. The project convention is that *all
 HTTP 200; only `StatusDTO.code` in the body carries the semantic outcome (200, 400, 401, 500).
 
 Fix: removed all `responseCode="400"` / `responseCode="500"` `@ApiResponse` entries. Each
-endpoint now declares only `responseCode="200"` (with description explaining `StatusDTO.code`
-values) plus `responseCode="403"` on `addUser` — the sole genuine Spring Security HTTP 403,
-raised *before* the controller runs, that cannot be normalised to 200.
+endpoint declared only `responseCode="200"` (with description explaining `StatusDTO.code` values)
+plus `responseCode="403"` on `addUser` — the sole genuine Spring Security HTTP 403.
 
 `@SecurityRequirements` (empty annotation) was added to `AuthController.login()` to mark the
-login endpoint as public in the Swagger UI lock icon, since the global `bearerAuth` scheme would
-otherwise incorrectly show it as requiring a token.
+login endpoint as public in the Swagger UI lock icon.
 
-**Final state**: **85 tests, 0 failures, BUILD SUCCESS** (unchanged — Phase 6.5 added no new tests).
+**State after Phase 6.5**: **85 tests, 0 failures, BUILD SUCCESS**.
+
+### Phase 6.6 — HTTP Status Code Standardisation
+
+```
+"Ora ti chiedo di fare una modifica sugli errori: voglio adeguarmi agli standard delle api
+rest e restituire i http status code corretti, quindi 400, 500 ecc"
+```
+
+After seeing the Swagger UI with realistic `@ApiResponse` entries, the decision was made to drop
+the original HTTP-200-for-everything constraint and align with standard REST semantics.
+
+**Rationale**: the HTTP-200-for-all-errors convention existed in the original README spec as a
+simplification. Once the API surface is documented in OpenAPI and consumed via the Swagger UI,
+the inconsistency becomes visible and counterproductive: reverse proxies, monitoring tools, and
+API gateways all rely on HTTP status to route and classify responses without parsing the body.
+Keeping HTTP 200 for errors forces every consumer to inspect the body for every call — including
+calls from tools that don't parse JSON. Aligning HTTP status with the semantic outcome costs
+nothing at the Spring layer and removes all this friction.
+
+**Files changed**:
+
+| File                         | Change                                                                                                                                                                                   |
+|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `GlobalExceptionHandler`     | `handleValidation` → `400 Bad Request`; `handleUnexpected` → `500 Internal Server Error`; `handleGenericException` → HTTP status from `HttpStatus.resolve(StatusDTO.code)`, fallback 500 |
+| `UserController`             | `@ApiResponse` entries for 400/500 now include `content/schema = GenericResponse`; 403 marked `content=@Content()` (intentionally body-less)                                             |
+| `AuthController`             | `@ApiResponse` for 400 (`GenericResponse`) and 401 (`LoginResponse`) with explicit schema                                                                                                |
+| `GlobalExceptionHandlerTest` | Three tests renamed; assertions updated from 200 to 404/400/500                                                                                                                          |
+
+**Design choices**:
+
+- `StatusDTO.code` is kept in the body alongside the HTTP status so clients that already
+  deserialise it do not need to change — the two values always agree.
+- `HttpStatus.resolve()` is used in `handleGenericException` to derive the HTTP status from
+  the exception's code dynamically, with `INTERNAL_SERVER_ERROR` as a safe fallback for any
+  non-standard code.
+- The 403 on `addUser` was already a genuine Spring Security HTTP response (not HTTP 200);
+  it required no change to the handler.
+
+**Final state**: **85 tests, 0 failures, BUILD SUCCESS** (three test assertions updated, count unchanged).
 
 ---
 

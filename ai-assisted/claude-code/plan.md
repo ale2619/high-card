@@ -257,8 +257,10 @@ public class GlobalExceptionHandler {
 }
 ```
 
-**Requirement**: all HTTP responses must return status code **200**.
+**Original requirement**: all HTTP responses must return status code **200**.
 Errors are communicated via `StatusDTO.code` in the response body.
+
+> **⚠️ Revised** — see Phase 6.6: this constraint was later dropped in favour of standard HTTP semantics.
 
 #### ✅ 3.2 `GenericResponse.error()` factory methods
 
@@ -437,7 +439,7 @@ addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter .c
 | `UserServiceImplTest`             | addUser (ok, validation errors, duplicate), catch bug regression |
 | `UserRepositorySearchTest`        | Pagination, sorting ASC/DESC, case-insensitive filter            |
 | `JwtTokenProviderTest`            | Generate, validate, expired, tampered, wrong issuer              |
-| `GlobalExceptionHandlerTest`      | All handlers, HTTP 200 confirmed in every case                   |
+| `GlobalExceptionHandlerTest`      | All handlers, HTTP status code matches semantic code in body     |
 
 **Target coverage**: >80%
 
@@ -479,6 +481,35 @@ nella UI in modo che si possa testare gli endpoint direttamente dal browser senz
 - `@SecurityRequirements` (empty) on `POST /auth/login` removes the padlock icon so the login endpoint is clearly marked
   as public in the UI.
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html` | API docs JSON: `http://localhost:8080/v3/api-docs`
+
+### ✅ PHASE 6.6 — HTTP Status Code Standardisation
+
+**Complexity**: LOW | **Depends on**: Phase 6.5 (Swagger UI made the inconsistency visible)
+
+> **Prompt**: *"Ora ti chiedo di fare una modifica sugli errori: voglio adeguarmi agli standard delle api rest
+> e restituire gli http status code corretti, quindi 400, 500 ecc"*
+
+The original spec required HTTP 200 for every response (errors communicated via `StatusDTO.code`).
+After seeing the Swagger UI expose this inconsistency clearly, the decision was made to align with
+standard REST semantics: HTTP status mirrors the semantic outcome, and `StatusDTO.code` redundantly
+carries the same value so clients that already inspect the body do not break.
+
+#### Changes
+
+| File                        | Change                                                                                   |
+|-----------------------------|------------------------------------------------------------------------------------------|
+| `GlobalExceptionHandler`    | `handleValidation` → `400 Bad Request`; `handleUnexpected` → `500 Internal Server Error`; `handleGenericException` → HTTP status derived from `StatusDTO.code` via `HttpStatus.resolve()`, fallback 500 |
+| `AuthController`            | Already returned `401 Unauthorized` on `BadCredentialsException` (aligned from Phase 5) |
+| `UserController`            | `@ApiResponses` updated with accurate `responseCode` + `content/schema` per response    |
+| `AuthController`            | `@ApiResponse` for 400 (→ `GenericResponse`) and 401 (→ `LoginResponse`) with schema    |
+| `GlobalExceptionHandlerTest`| Three tests renamed and assertions updated: `404`/`400`/`500` instead of `200`           |
+
+#### Design rationale
+
+- **Discoverability**: standard HTTP status codes allow reverse proxies, monitoring tools, and API gateways to handle errors without parsing the body.
+- **Swagger accuracy**: `@ApiResponse` entries now carry distinct `content/schema` per status code, so the UI shows the correct example shape for each outcome instead of reusing the 200 schema.
+- **`StatusDTO.code` kept**: body code is preserved to avoid breaking callers that already deserialise it; the HTTP status and body code always agree.
+- **403 anomaly unchanged**: Spring Security raises HTTP 403 before the controller runs; it cannot be intercepted by `GlobalExceptionHandler`. `@ApiResponse(responseCode="403", content=@Content())` marks it as intentionally body-less.
 
 ---
 
