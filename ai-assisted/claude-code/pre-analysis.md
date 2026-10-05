@@ -62,13 +62,9 @@ it.sara.demo
 #### Critical Bug #1 — Validation Exceptions Silently Swallowed (`UserServiceImpl.java:59-63`)
 
 ```java
-}catch(Exception e){
-        log.
-
-error(e.getMessage(),e);
-        throw new
-
-GenericException(GenericException.GENERIC_ERROR); // ← ALWAYS 500
+} catch (Exception e) {
+    log.error(e.getMessage(),e);
+    throw new GenericException(GenericException.GENERIC_ERROR); // ← ALWAYS 500
 }
 ```
 
@@ -79,13 +75,10 @@ are effectively dead code: the correct status code never reaches the caller.
 **Fix**: distinguish `GenericException` from the generic catch:
 
 ```java
-}catch(GenericException e){
-        throw e; // rethrow without wrapping
-}catch(
-Exception e){
-        throw new
-
-GenericException(GenericException.GENERIC_ERROR);
+} catch (GenericException e) {
+    throw e; // rethrow without wrapping
+} catch(Exception e) {
+    throw new GenericException(GenericException.GENERIC_ERROR);
 }
 ```
 

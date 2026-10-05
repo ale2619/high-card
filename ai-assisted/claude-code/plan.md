@@ -433,15 +433,15 @@ nella UI in modo che si possa testare gli endpoint direttamente dal browser senz
 
 #### Changes
 
-| File                                                | Change                                                                                                     |
-|-----------------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| `pom.xml`                                           | `springdoc-openapi-starter-webmvc-ui:2.8.9`            |
-| `application.yml`                                   | `springdoc.api-docs.version: openapi_3_1` + `spring.main.allow-bean-definition-overriding: true`           |
-| `SecurityConfig`                                    | `permitAll()` on `/swagger-ui/**` and `/v3/api-docs/**`                                                    |
-| `config/OpenApiConfig`                              | New bean — title, version, global `bearerAuth` JWT security scheme                                         |
-| `AuthController`                                    | `@Tag`, `@Operation`, `@ApiResponses`, `@SecurityRequirements` (login is public)                           |
-| `UserController`                                    | `@Tag`, `@Operation`, `@ApiResponses` on both methods                                                      |
-| `StatusDTO`, `UserDTO`                              | `@Schema` on class and all fields with `description` + `example`                                           |
+| File                                                | Change                                                                                                      |
+|-----------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| `pom.xml`                                           | `springdoc-openapi-starter-webmvc-ui:2.8.9`                                                                 |
+| `application.yml`                                   | `springdoc.api-docs.version: openapi_3_1` + `spring.main.allow-bean-definition-overriding: true`            |
+| `SecurityConfig`                                    | `permitAll()` on `/swagger-ui/**` and `/v3/api-docs/**`                                                     |
+| `config/OpenApiConfig`                              | New bean — title, version, global `bearerAuth` JWT security scheme                                          |
+| `AuthController`                                    | `@Tag`, `@Operation`, `@ApiResponses`, `@SecurityRequirements` (login is public)                            |
+| `UserController`                                    | `@Tag`, `@Operation`, `@ApiResponses` on both methods                                                       |
+| `StatusDTO`, `UserDTO`                              | `@Schema` on class and all fields with `description` + `example`                                            |
 | `LoginRequest`, `AddUserRequest`, `GetUsersRequest` | `@Schema` on class and all fields; `requiredMode` on mandatory fields; `@Schema` on `OrderType` enum values |
 
 #### Notes
@@ -466,13 +466,13 @@ carries the same value so clients that already inspect the body do not break.
 
 #### Changes
 
-| File                        | Change                                                                                   |
-|-----------------------------|------------------------------------------------------------------------------------------|
-| `GlobalExceptionHandler`    | `handleValidation` → `400 Bad Request`; `handleUnexpected` → `500 Internal Server Error`; `handleGenericException` → HTTP status derived from `StatusDTO.code` via `HttpStatus.resolve()`, fallback 500 |
-| `AuthController`            | Already returned `401 Unauthorized` on `BadCredentialsException` (aligned from Phase 5) |
-| `UserController`            | `@ApiResponses` updated with accurate `responseCode` + `content/schema` per response    |
-| `AuthController`            | `@ApiResponse` for 400 (→ `GenericResponse`) and 401 (→ `LoginResponse`) with schema    |
-| `GlobalExceptionHandlerTest`| Three tests renamed and assertions updated: `404`/`400`/`500` instead of `200`           |
+| File                         | Change                                                                                                                                                                                                  |
+|------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `GlobalExceptionHandler`     | `handleValidation` → `400 Bad Request`; `handleUnexpected` → `500 Internal Server Error`; `handleGenericException` → HTTP status derived from `StatusDTO.code` via `HttpStatus.resolve()`, fallback 500 |
+| `AuthController`             | Already returned `401 Unauthorized` on `BadCredentialsException` (aligned from Phase 5)                                                                                                                 |
+| `UserController`             | `@ApiResponses` updated with accurate `responseCode` + `content/schema` per response                                                                                                                    |
+| `AuthController`             | `@ApiResponse` for 400 (→ `GenericResponse`) and 401 (→ `LoginResponse`) with schema                                                                                                                    |
+| `GlobalExceptionHandlerTest` | Three tests renamed and assertions updated: `404`/`400`/`500` instead of `200`                                                                                                                          |
 
 #### Design rationale
 

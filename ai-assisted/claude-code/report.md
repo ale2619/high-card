@@ -591,8 +591,6 @@ copy-paste. The main risk is increased: **code written autonomously must be revi
   test time: wrong import, no-args constructor on a `@RequiredArgsConstructor` class,
   `StringUtils.hasText` inverted by the IDE linter. The tool cannot run `mvn compile` without
   a user approval gate, so these round-trips add friction.
-- The springdoc version mismatch (3.x vs 2.x) was a real time sink. The tool had to be
-  corrected after the fact rather than catching the version constraint upfront.
 - In a long session, the tool sometimes regenerated slightly stale assumptions (e.g.,
   referring to a class field that had already been refactored). Keeping sessions focused on
   one phase at a time reduced this risk but did not eliminate it.
@@ -606,12 +604,3 @@ copy-paste. The main risk is increased: **code written autonomously must be revi
 - Fixing coding style decision and architectural choices (e.g., `PasswordEncoder` bean, `InMemoryUserDetailsManager`,
   HTTP status codes)
   required explicit prompts and review.
-
-### Recommendation
-
-Claude Code is well-suited for projects with a clear phased plan and an existing codebase to
-anchor to. The productivity gain over Copilot chat is most visible in phases that require
-reading many files before writing any — the agentic approach handles this transparently.
-The main discipline required is **reviewing every diff carefully**: the tool writes directly to
-files, so **a missed review is a missed bug**. For a team setting, the approach would benefit from
-a CI gate that runs `mvn test` after each session, replacing the approval-gated shell command.
