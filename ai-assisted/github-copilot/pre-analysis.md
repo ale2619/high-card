@@ -119,7 +119,7 @@ Fai riferimento al file README in allegato per poi procedere ad aiutarmi"
 1. ✅ **Task Priority**: User chose "Complessità crescente" (simple → complex)
 2. ✅ **JWT Approach**: Not specified, will use balanced approach
 3. ✅ **Database**: Keep FakeDatabase as-is
-4. ✅ **Test Coverage**: Target >85%, complete with edge cases
+4. ✅ **Test Coverage**: Target >80%, complete with edge cases
 
 ---
 

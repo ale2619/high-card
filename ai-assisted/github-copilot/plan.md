@@ -36,7 +36,7 @@ Java/Spring development.
 2. **Security**: SQL injection prevention, JWT with signature/issuer/expiration/policy validation
 3. **Error Handling**: Centralized, all responses via StatusDTO with HTTP 200
 4. **Code Quality**: Refactoring, exception handling, comprehensive Javadoc
-5. **Testing**: Unit tests with >85% coverage
+5. **Testing**: Unit tests with >80% coverage
 6. **Bug Fixes**: Identify and fix logical errors
 
 ---

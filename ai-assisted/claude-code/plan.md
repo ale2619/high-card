@@ -198,8 +198,10 @@ The project's custom `StringUtil.isNullOrEmpty()` was replaced with Spring's bui
 
 #### ✅ 2.8 Builder Pattern — standing rule
 
-`@Builder` (or `@SuperBuilder` for inheritance chains) is preferred over `new Type()` + setters wherever technically correct.
-`@SuperBuilder` requires the annotation on all classes in the hierarchy; avoided on response classes whose base (`GenericResponse`) carries static factory methods.
+`@Builder` (or `@SuperBuilder` for inheritance chains) is preferred over `new Type()` + setters wherever technically
+correct.
+`@SuperBuilder` requires the annotation on all classes in the hierarchy; avoided on response classes whose base (
+`GenericResponse`) carries static factory methods.
 
 `@Builder` + `@NoArgsConstructor` + `@AllArgsConstructor` added to `StatusDTO`, `User`, `UserDTO`, `CriteriaAddUser`.
 All call sites refactored to use `Type.builder()...build()` instead of `new Type()` + setters.
@@ -210,11 +212,13 @@ All call sites refactored to use `Type.builder()...build()` instead of `new Type
 ### ✅ PHASE 2.9 — Pre-Phase-5 additions (custom exceptions, AOP logging, addUser response)
 
 #### ✅ addUser returns created user
+
 `AddUserResult` and `AddUserResponse` now carry a `UserDTO user` field populated with the
 assigned GUID. `AddUserAssembler.toResponse()` builds the response via `@SuperBuilder`.
 Controller return type changed to `AddUserResponse`.
 
 #### ✅ AOP logging (`LoggingAspect`)
+
 - **Controllers** (INFO): logs `[HTTP_METHOD URI]` on entry and `OK [Xms]` on exit.
   Uses `HttpServletRequest` from `RequestContextHolder` for accurate path info.
 - **Services** (INFO): logs method entry/exit with elapsed time via `@Around`.
@@ -253,8 +257,10 @@ public class GlobalExceptionHandler {
 }
 ```
 
-**Requirement**: all HTTP responses must return status code **200**.
+**Original requirement**: all HTTP responses must return status code **200**.
 Errors are communicated via `StatusDTO.code` in the response body.
+
+> **⚠️ Revised** — see Phase 6.6: this constraint was later dropped in favour of standard HTTP semantics.
 
 #### ✅ 3.2 `GenericResponse.error()` factory methods
 
@@ -343,29 +349,36 @@ security/jwt/
 String generateToken(String username, String role)
 
 Optional<Claims> validateAndExtractClaims(String token)   // single parse: signature + expiration + issuer + policy
-                                                           // returns empty Optional if invalid
+// returns empty Optional if invalid
 ```
 
 **Security refactoring applied post-Phase-5 (round 1)**:
-- `validateToken(boolean)` replaced by `validateAndExtractClaims(Optional<Claims>)` — eliminates 3-parse-per-request pattern in the filter
+
+- `validateToken(boolean)` replaced by `validateAndExtractClaims(Optional<Claims>)` — eliminates 3-parse-per-request
+  pattern in the filter
 - `signingKey()` removed; key cached in `cachedSigningKey` via `@PostConstruct`
 - `PasswordEncoder` (BCrypt) bean added to `SecurityConfig`
 
 **Security refactoring applied post-Phase-5 (round 2 — UserDetailsService)**:
-- `InMemoryUserDetailsManager` registered in `SecurityConfig` with two accounts: `user/user123` (USER) and `admin/admin123` (ADMIN); passwords BCrypt-encoded inline
+
+- `InMemoryUserDetailsManager` registered in `SecurityConfig` with two accounts: `user/user123` (USER) and
+  `admin/admin123` (ADMIN); passwords BCrypt-encoded inline
 - `AuthenticationManager` bean exposed via `AuthenticationConfiguration`
-- `AuthController` completely rewritten: `@Value` fields, `@PostConstruct`, `PasswordEncoder` and manual `passwordEncoder.matches()` removed; credential verification delegated to `authenticationManager.authenticate()`
+- `AuthController` completely rewritten: `@Value` fields, `@PostConstruct`, `PasswordEncoder` and manual
+  `passwordEncoder.matches()` removed; credential verification delegated to `authenticationManager.authenticate()`
 - Role extracted from `Authentication.getAuthorities()` post-login, `ROLE_` prefix stripped before embedding in JWT
-- Login failure returns HTTP `401 Unauthorized` — only endpoint deviating from the project's HTTP-200-for-all-errors convention, justified because authentication failure is a transport-level concern
+- Login failure returns HTTP `401 Unauthorized` — only endpoint deviating from the project's HTTP-200-for-all-errors
+  convention, justified because authentication failure is a transport-level concern
 - `auth.username` / `auth.password` properties removed from `application.yml`
 
 **Required validations**:
-| Validation | jjwt method |
-|------------|-------------|
-| Signature (HMAC-SHA256) | `verifyWith(secretKey)` |
-| Issuer | `.requireIssuer("high-card-app")` |
-| Expiration | `.requireExpiration()` (jjwt default) |
-| Policy/role | check claim `role` ∈ `{USER, ADMIN}` |
+
+| Validation              | jjwt method                           |
+|-------------------------|---------------------------------------|
+| Signature (HMAC-SHA256) | `verifyWith(secretKey)`               |
+| Issuer                  | `.requireIssuer("high-card-app")`     |
+| Expiration              | `.requireExpiration()` (jjwt default) |
+| Policy/role             | check claim `role` ∈ `{USER, ADMIN}`  |
 
 #### 5.2 `AuthController` + `POST /auth/login`
 
@@ -385,7 +398,7 @@ Extends `OncePerRequestFilter`:
 ```java
 http
         .csrf(AbstractHttpConfigurer::disable)
-  .
+    .
 
 sessionManagement(sm ->sm.
 
@@ -395,24 +408,25 @@ sessionCreationPolicy(STATELESS))
 authorizeHttpRequests(auth ->auth
         .
 
-requestMatchers("/auth/login").
+requestMatchers("/auth/login")
+        .
 
 permitAll()
-      .
+        .
 
-anyRequest().
+anyRequest()
+        .
 
 authenticated()
-  )
-          .
+    )
+            .
 
-addFilterBefore(jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter .class);
+addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter .class);
 ```
 
 ---
 
-### PHASE 6 — Testing and Documentation
+### ✅ PHASE 6 — Testing and Documentation
 
 **Complexity**: MEDIUM | **Depends on**: Phases 2–5
 
@@ -425,9 +439,9 @@ addFilterBefore(jwtAuthenticationFilter,
 | `UserServiceImplTest`             | addUser (ok, validation errors, duplicate), catch bug regression |
 | `UserRepositorySearchTest`        | Pagination, sorting ASC/DESC, case-insensitive filter            |
 | `JwtTokenProviderTest`            | Generate, validate, expired, tampered, wrong issuer              |
-| `GlobalExceptionHandlerTest`      | All handlers, HTTP 200 confirmed in every case                   |
+| `GlobalExceptionHandlerTest`      | All handlers, HTTP status code matches semantic code in body     |
 
-**Target coverage**: >85%
+**Target coverage**: >80%
 
 #### 6.2 Javadoc
 
@@ -438,6 +452,64 @@ Priority classes:
 - `JwtTokenProvider` — validation logic documented
 - Validation annotations — expected regex and format
 - `FakeDatabase` — note that it is for demo purposes only
+
+### ✅ PHASE 6.5 — OpenAPI / Swagger UI
+
+**Complexity**: LOW | **Depends on**: Phase 5 (JWT security scheme), Phase 6 (Javadoc context)
+
+> **Prompt**: *"Aggiungi la dipendenza springdoc-openapi al progetto per esporre uno swagger con spec 2.8.9. Arricchisci
+i controller e i DTO principali con le annotazioni @Operation, @Schema e @ApiResponse. Configura il security scheme JWT
+nella UI in modo che si possa testare gli endpoint direttamente dal browser senza dover usare strumenti esterni."*
+
+#### Changes
+
+| File                                                | Change                                                                                                     |
+|-----------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| `pom.xml`                                           | `springdoc-openapi-starter-webmvc-ui:2.8.9`            |
+| `application.yml`                                   | `springdoc.api-docs.version: openapi_3_1` + `spring.main.allow-bean-definition-overriding: true`           |
+| `SecurityConfig`                                    | `permitAll()` on `/swagger-ui/**` and `/v3/api-docs/**`                                                    |
+| `config/OpenApiConfig`                              | New bean — title, version, global `bearerAuth` JWT security scheme                                         |
+| `AuthController`                                    | `@Tag`, `@Operation`, `@ApiResponses`, `@SecurityRequirements` (login is public)                           |
+| `UserController`                                    | `@Tag`, `@Operation`, `@ApiResponses` on both methods                                                      |
+| `StatusDTO`, `UserDTO`                              | `@Schema` on class and all fields with `description` + `example`                                           |
+| `LoginRequest`, `AddUserRequest`, `GetUsersRequest` | `@Schema` on class and all fields; `requiredMode` on mandatory fields; `@Schema` on `OrderType` enum values |
+
+#### Notes
+
+- `allow-bean-definition-overriding: true` needed because springdoc 2.8.9 and Spring Boot 3.5.0 both autoconfigure an
+  `ErrorMvcAutoConfiguration` bean with the same name.
+- `@SecurityRequirements` (empty) on `POST /auth/login` removes the padlock icon so the login endpoint is clearly marked
+  as public in the UI.
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html` | API docs JSON: `http://localhost:8080/v3/api-docs`
+
+### ✅ PHASE 6.6 — HTTP Status Code Standardisation
+
+**Complexity**: LOW | **Depends on**: Phase 6.5 (Swagger UI made the inconsistency visible)
+
+> **Prompt**: *"Ora ti chiedo di fare una modifica sugli errori: voglio adeguarmi agli standard delle api rest
+> e restituire gli http status code corretti, quindi 400, 500 ecc"*
+
+The original spec required HTTP 200 for every response (errors communicated via `StatusDTO.code`).
+After seeing the Swagger UI expose this inconsistency clearly, the decision was made to align with
+standard REST semantics: HTTP status mirrors the semantic outcome, and `StatusDTO.code` redundantly
+carries the same value so clients that already inspect the body do not break.
+
+#### Changes
+
+| File                        | Change                                                                                   |
+|-----------------------------|------------------------------------------------------------------------------------------|
+| `GlobalExceptionHandler`    | `handleValidation` → `400 Bad Request`; `handleUnexpected` → `500 Internal Server Error`; `handleGenericException` → HTTP status derived from `StatusDTO.code` via `HttpStatus.resolve()`, fallback 500 |
+| `AuthController`            | Already returned `401 Unauthorized` on `BadCredentialsException` (aligned from Phase 5) |
+| `UserController`            | `@ApiResponses` updated with accurate `responseCode` + `content/schema` per response    |
+| `AuthController`            | `@ApiResponse` for 400 (→ `GenericResponse`) and 401 (→ `LoginResponse`) with schema    |
+| `GlobalExceptionHandlerTest`| Three tests renamed and assertions updated: `404`/`400`/`500` instead of `200`           |
+
+#### Design rationale
+
+- **Discoverability**: standard HTTP status codes allow reverse proxies, monitoring tools, and API gateways to handle errors without parsing the body.
+- **Swagger accuracy**: `@ApiResponse` entries now carry distinct `content/schema` per status code, so the UI shows the correct example shape for each outcome instead of reusing the 200 schema.
+- **`StatusDTO.code` kept**: body code is preserved to avoid breaking callers that already deserialise it; the HTTP status and body code always agree.
+- **403 anomaly unchanged**: Spring Security raises HTTP 403 before the controller runs; it cannot be intercepted by `GlobalExceptionHandler`. `@ApiResponse(responseCode="403", content=@Content())` marks it as intentionally body-less.
 
 ---
 

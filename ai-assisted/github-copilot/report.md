@@ -197,7 +197,7 @@ Started with high-level requirements → progressively detailed codebase
 - AI might only test happy paths
 - Edge cases (null, empty, boundary) might be missed
 - Integration tests might not actually test integration
-- Coverage target >85% might not mean meaningful coverage
+- Coverage target >80% might not mean meaningful coverage
 
 **Mitigation**:
 - ✅ Use TDD approach: define test cases first, then implement

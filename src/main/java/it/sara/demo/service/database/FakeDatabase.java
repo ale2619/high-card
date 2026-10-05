@@ -6,6 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * In-memory user store used as a stand-in for a real database.
+ * <p>
+ * <strong>Demo only</strong> — not thread-safe, not persistent. All data is
+ * lost on application restart. Replace with a JPA/JDBC repository in production.
+ * <p>
+ * The static initializer seeds {@link #TABLE_USER} with 10 sample records so the
+ * application starts with searchable data out of the box.
+ */
 public class FakeDatabase {
 
     public static final List<User> TABLE_USER = new ArrayList<>();

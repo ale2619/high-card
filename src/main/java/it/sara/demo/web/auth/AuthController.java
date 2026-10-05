@@ -1,5 +1,11 @@
 package it.sara.demo.web.auth;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import it.sara.demo.security.JwtTokenProvider;
 import it.sara.demo.web.auth.request.LoginRequest;
 import it.sara.demo.web.auth.response.LoginResponse;
@@ -23,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Tag(name = "Authentication", description = "Obtain and refresh JWT tokens")
 public class AuthController {
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -37,15 +44,22 @@ public class AuthController {
      * The role embedded in the token is derived from the first authority
      * returned by the authenticated principal, stripped of the {@code ROLE_} prefix
      * that Spring Security adds internally.
-     * <p>
-     * All responses return HTTP {@code 200 OK} per the project convention.
-     * The outcome is communicated via {@code StatusDTO.code} in the body:
-     * {@code 200} on success, {@code 401} on invalid credentials.
      *
      * @param request login payload with {@code username} and {@code password}
-     * @return {@code 200 OK} in all cases; body carries {@code StatusDTO.code 200} on success
-     *         or {@code StatusDTO.code 401} on bad credentials
+     * @return {@code 200 OK} with a JWT on success; {@code 400 Bad Request} for blank fields;
+     *         {@code 401 Unauthorized} for wrong credentials
      */
+    @Operation(
+            summary = "Login",
+            description = "Authenticate with username and password. Returns a signed JWT valid for the configured expiration window."
+    )
+    @ApiResponse(responseCode = "200", description = "Credentials valid — JWT returned",
+            content = @Content(schema = @Schema(implementation = LoginResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Blank username or password (bean validation failure)",
+            content = @Content(schema = @Schema(implementation = GenericResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Wrong credentials",
+            content = @Content(schema = @Schema(implementation = LoginResponse.class)))
+    @SecurityRequirements   // login endpoint requires no token
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("Login attempt for user [{}]", request.getUsername());
