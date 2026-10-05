@@ -87,7 +87,7 @@ public class UserServiceImpl implements UserService {
             if (log.isErrorEnabled()) {
                 log.error(e.getMessage(), e);
             }
-            throw new GenericException(GenericException.GENERIC_ERROR);
+            throw new GenericException(500, "Generic error");
         }
     }
 
@@ -101,7 +101,8 @@ public class UserServiceImpl implements UserService {
      *
      * @param criteria search query, pagination (offset/limit) and sort order
      * @return {@link GetUsersResult} with the matching page of users and total count
-     * @throws GenericException code 500 if an unexpected error occurs
+     * @throws GenericException code 404 if no users match the search criteria;
+     *                          code 500 if an unexpected error occurs
      */
     @Override
     public GetUsersResult getUsers(CriteriaGetUsers criteria) throws GenericException {
@@ -113,6 +114,13 @@ public class UserServiceImpl implements UserService {
             int total = userRepository.count(criteria);
             log.info("Search returned [{}] users (total matching: [{}])", users.size(), total);
 
+            if (users.isEmpty()) {
+                throw new GenericException(404, String.format(
+                        "No users found for query=[%s] offset=[%d] limit=[%d] order=[%s]",
+                        criteria.getQuery(), criteria.getOffset(), criteria.getLimit(), criteria.getOrder()
+                ));
+            }
+
             return GetUsersResult.builder()
                     .total(total)
                     .offset(criteria.getOffset())
@@ -120,11 +128,13 @@ public class UserServiceImpl implements UserService {
                     .users(users.stream().map(userAssembler::toDTO).toList())
                     .build();
 
+        } catch (GenericException e) {
+            throw e;
         } catch (Exception e) {
             if (log.isErrorEnabled()) {
                 log.error(e.getMessage(), e);
             }
-            throw new GenericException(GenericException.GENERIC_ERROR);
+            throw new GenericException(500, "Generic error");
         }
     }
 }

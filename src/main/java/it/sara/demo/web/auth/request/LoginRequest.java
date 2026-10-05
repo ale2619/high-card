@@ -15,6 +15,6 @@ public class LoginRequest {
     private String username;
 
     @NotBlank(message = "Password is required")
-    @Schema(description = "Account password", example = "admin123")
+    @Schema(description = "Account password")
     private String password;
 }

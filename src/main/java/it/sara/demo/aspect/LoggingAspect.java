@@ -40,10 +40,10 @@ public class LoggingAspect {
     @Around("execution(* it.sara.demo.service..*ServiceImpl.*(..))")
     public Object logService(ProceedingJoinPoint pjp) throws Throwable {
         String method = pjp.getSignature().toShortString();
-        log.info("Starting method - {}", method);
+        log.debug("Starting method - {}", method);
         long start = System.currentTimeMillis();
         Object result = pjp.proceed();
-        log.info("Ending method - {} [{}ms]", method, System.currentTimeMillis() - start);
+        log.debug("Ending method - {} [{}ms]", method, System.currentTimeMillis() - start);
         return result;
     }
 

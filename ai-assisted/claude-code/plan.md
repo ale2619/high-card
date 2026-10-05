@@ -102,30 +102,18 @@ jwt:
 
 ```java
 // BEFORE (buggy)
-}catch(Exception e){
-        log.
-
-error(e.getMessage(),e);
-        throw new
-
-GenericException(GenericException.GENERIC_ERROR);
+} catch (Exception e) {
+    log.error(e.getMessage(),e);
+    throw new GenericException(GenericException.GENERIC_ERROR);
 }
 
 // AFTER (fixed)
-        }catch(
-GenericException e){
-        log.
-
-error(e.getMessage(),e);
-        throw e;
-}catch(
-Exception e){
-        log.
-
-error(e.getMessage(),e);
-        throw new
-
-GenericException(GenericException.GENERIC_ERROR);
+} catch (GenericException e) {
+    log.error(e.getMessage(),e);
+    throw e;
+} catch (Exception e){
+    log.error(e.getMessage(),e);
+    throw new GenericException(GenericException.GENERIC_ERROR);
 }
 ```
 
@@ -397,31 +385,13 @@ Extends `OncePerRequestFilter`:
 
 ```java
 http
-        .csrf(AbstractHttpConfigurer::disable)
-    .
-
-sessionManagement(sm ->sm.
-
-sessionCreationPolicy(STATELESS))
-        .
-
-authorizeHttpRequests(auth ->auth
-        .
-
-requestMatchers("/auth/login")
-        .
-
-permitAll()
-        .
-
-anyRequest()
-        .
-
-authenticated()
+    .csrf(AbstractHttpConfigurer::disable)
+    .sessionManagement(sm ->sm. sessionCreationPolicy(STATELESS))
+    .authorizeHttpRequests(auth ->auth
+        .requestMatchers("/auth/login").permitAll()
+        .anyRequest().authenticated()
     )
-            .
-
-addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter .class);
+    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter .class);
 ```
 
 ---
@@ -513,13 +483,72 @@ carries the same value so clients that already inspect the body do not break.
 
 ---
 
-### PHASE 7 — AI-Assisted Documentation (Bonus)
+### ✅ PHASE 7 — AI-Assisted Documentation (Bonus)
 
-**Complexity**: LOW | **Current phase**
+**Complexity**: LOW
 
 - [x] `pre-analysis.md` — context and initial analysis
 - [x] `plan.md` — this file
-- [ ] `report.md` — to be completed after implementation
+- [x] `report.md` — completed after implementation
+
+---
+
+### ✅ PHASE 8 — Post-Review Technical Refinements
+
+**Complexity**: LOW-MEDIUM | **Depends on**: all previous phases
+
+Code review identified several technical, functional and architectural issues. Applied fixes:
+
+#### 8.1 Thread Safety — `FakeDatabase`
+`TABLE_USER` was an `ArrayList` — not thread-safe under concurrent reads/writes.
+Replaced with `CopyOnWriteArrayList` to prevent `ConcurrentModificationException` on concurrent access.
+
+#### 8.2 Remove Shared Mutable Static `GENERIC_ERROR`
+`GenericException.GENERIC_ERROR` was a `public static final StatusDTO` — mutable via `@Setter`.
+Removed the constant; call sites now use `new GenericException(500, "Generic error")` to ensure
+each throw produces a fresh instance with its own `traceId`.
+
+#### 8.3 `JwtProperties` — Remove Redundant `@Configuration`
+`@Configuration` on a `@ConfigurationProperties` class is non-idiomatic and registers an unnecessary
+Spring bean. Removed `@Configuration` from `JwtProperties`; added
+`@EnableConfigurationProperties(JwtProperties.class)` to `SecurityConfig` (already a `@Configuration`).
+
+#### 8.4 `getUsers` Exception Catch Order
+`getUsers` had only a `catch (Exception e)` block which would absorb any `GenericException` thrown
+in the future by the repository layer, silently replacing its status code with 500.
+Added defensive `catch (GenericException e) { throw e; }` before the generic catch, consistent
+with the existing pattern in `addUser`.
+
+#### 8.5 Search Endpoint Path
+`POST /api/v1/users` for search was semantically ambiguous alongside `PUT /api/v1/users` for creation.
+Renamed to `POST /api/v1/users/search` to make the intent explicit without changing the HTTP verb.
+
+#### 8.6 User Creation Returns HTTP 201
+`addUser` was returning `200 OK` on resource creation. Changed to `201 Created` per REST convention.
+`@ApiResponse(responseCode)` updated accordingly.
+
+#### 8.7 Remove Empty Marker Base Classes
+`GenericCriteria` and `GenericRequest` were empty classes providing no shared behaviour.
+Removed `extends GenericCriteria` from `CriteriaAddUser` and `CriteriaGetUsers`;
+removed `extends GenericRequest` from `AddUserRequest` and `GetUsersRequest`.
+Deleted both files and their now-empty packages.
+
+#### 8.8 AOP Service Logging — INFO → DEBUG
+`LoggingAspect.logService` entry/exit logs downgraded from `log.info` to `log.debug` to reduce
+noise in production. Internal step-level logs inside `UserServiceImpl` remain at INFO where
+they carry business-relevant information (field validation, GUID assigned, search result counts).
+
+#### 8.9 Remove Password Example from Swagger
+`LoginRequest.password` had `@Schema(example = "admin123")` which exposed a real credential in
+the OpenAPI spec. Removed the `example` attribute.
+
+#### 8.10 `getUsers` — 404 When No Results
+`getUsers` returned an empty list with HTTP 200 when no users matched the criteria.
+Throws `GenericException(404, ...)` instead, with a message carrying the full search context:
+`"No users found for query=[...] offset=[...] limit=[...] order=[...]"`.
+`GlobalExceptionHandler` maps it to HTTP 404 via `HttpStatus.resolve()`.
+`@ApiResponse(responseCode="404")` added to `UserController`.
+`UserServiceImplTest` extended with `getUsers_emptyResult_throwsGenericException404`.
 
 ---
 

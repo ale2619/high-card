@@ -331,6 +331,56 @@ nothing at the Spring layer and removes all this friction.
 
 **Final state**: **85 tests, 0 failures, BUILD SUCCESS** (three test assertions updated, count unchanged).
 
+### Phase 8 — Post-Review Technical Refinements
+
+```
+"Fai una code review completa del codice. Evidenzia tutte le possibili ottimizzazioni dividendo l'analisi in tre categorie:
+Tecnica (clean code, performance, best practice)
+Funzionale (edge case, gestione errori, validazione)
+Architetturale (decoupling, pattern, scalabilità)
+Per ogni punto indicami problema e proposta di fix."
+
+"Esegui T1, T4 e T7 (usa @EnableConfigurationProperties(JwtProperties.class)), F1, F5, poi A1 (cambia solo il path aggiungendo search), A2, A5, A9 (i log interni al service li voglio ad info dove necessario)"
+```
+
+Review identified 10 technical, 6 functional and 10 architectural issues. Selected subset applied:
+
+| Change | File                                                                       | Description                                                                                                         |
+|--------|----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| T1     | `FakeDatabase.java`                                                        | `ArrayList` → `CopyOnWriteArrayList` for thread safety                                                              |
+| T4     | `GenericException.java`                                                    | Removed shared mutable `GENERIC_ERROR` static; call sites use inline `new GenericException(500, "Generic error")`   |
+| T7     | `JwtProperties.java`, `SecurityConfig.java`                                | Removed redundant `@Configuration`; added `@EnableConfigurationProperties(JwtProperties.class)` to `SecurityConfig` |
+| F1     | `UserServiceImpl.java`                                                     | Added defensive `catch (GenericException e) { throw e; }` in `getUsers` before the generic catch                    |
+| F5     | `LoginRequest.java`                                                        | Removed `example = "admin123"` from `@Schema` on password field                                                     |
+| A1     | `UserController.java`                                                      | Renamed search endpoint from `POST /api/v1/users` → `POST /api/v1/users/search`                                     |
+| A2     | `UserController.java`                                                      | `addUser` now returns `201 Created`; `@ApiResponse(responseCode)` updated                                           |
+| A5     | `CriteriaAddUser`, `CriteriaGetUsers`, `AddUserRequest`, `GetUsersRequest` | Removed `extends` from empty base classes; deleted `GenericCriteria.java`, `GenericRequest.java` and their packages |
+| A9     | `LoggingAspect.java`                                                       | `logService` entry/exit downgraded to `log.debug`; internal `UserServiceImpl` step logs remain INFO                 |
+
+**State after Phase 8**: **85 tests, 0 failures, BUILD SUCCESS**.
+
+### Phase 8.1 — 404 on Empty Search Results
+
+```
+"Aggiungi questa funzionalità: se nella get degli utenti non viene restituito nessun utente,
+allora restituiamo not found. Il messaggio deve dire che nessun utente è stato trovato con
+quelle determinate condizioni di ricerca."
+```
+
+`getUsers` previously returned HTTP 200 with an empty list when no users matched the criteria.
+Changed to throw `GenericException(404, ...)` with a contextual message carrying the full search
+state: `"No users found for query=[...] offset=[...] limit=[...] order=[...]"`.
+
+`GlobalExceptionHandler.handleGenericException` maps it to HTTP 404 automatically via `HttpStatus.resolve(404)`.
+
+| File                  | Change                                                                                                    |
+|-----------------------|-----------------------------------------------------------------------------------------------------------|
+| `UserServiceImpl`     | `if (users.isEmpty())` → `throw new GenericException(404, String.format(...))`                            |
+| `UserController`      | `@ApiResponse(responseCode = "404", content = GenericResponse)` added to `getUsers`                       |
+| `UserServiceImplTest` | `getUsers_emptyResult_throwsGenericException404` added; message checked with `contains("No users found")` |
+
+**Final state**: **86 tests, 0 failures, BUILD SUCCESS**.
+
 ---
 
 ## 2. Difficulties Encountered
@@ -470,7 +520,7 @@ This catches integration errors early rather than discovering them at the end.
 
 ---
 
-## 5. Efficiency Assessment *[PARTIAL — to be updated post-implementation]*
+## 5. Efficiency Assessment
 
 ### Planning Phase (Completed)
 
@@ -481,16 +531,23 @@ This catches integration errors early rather than discovering them at the end.
 | Bugs found beyond Copilot plan       | 2 (catch bug, invalid seed data)        |
 | Manual copy-paste required           | 0                                       |
 
-### Implementation Phase *[IN PROGRESS]*
+### Implementation Phase
 
-| Metric                         | Estimated | Actual |
-|--------------------------------|-----------|--------|
-| Phase 1 (dependencies)         | 30 min    | TBD    |
-| Phase 2 (bug fix + validation) | 2h        | TBD    |
-| Phase 3 (exception handling)   | 1h        | TBD    |
-| Phase 4 (search/pagination)    | 2h        | TBD    |
-| Phase 5 (JWT)                  | 3h        | TBD    |
-| Phase 6 (tests + javadoc)      | 3h        | TBD    |
+> **Note**: "Actual" times include prompt writing, review of generated diffs, and manual corrections.
+> They do not include time to read this report or update documentation.
+
+| Phase                             | Estimated   | Actual      |
+|-----------------------------------|-------------|-------------|
+| Phase 1 — Dependencies + config   | 30 min      | ~15 min     |
+| Phase 2 — Bug fix + validation    | 2h          | ~1h         |
+| Phase 3 — Exception handling      | 1h          | ~30 min     |
+| Phase 4 — Search + pagination     | 2h          | ~1h 30m     |
+| Phase 5 — JWT authentication      | 3h          | ~1h         |
+| Phase 6 — Tests + javadoc         | 3h          | ~2h         |
+| Phase 6.5 — OpenAPI / Swagger UI  | —           | ~45 min     |
+| Phase 6.6 — HTTP status alignment | —           | ~20 min     |
+| Phase 8 — Fix                     | —           | ~10 min     |
+| **Total**                         | **11h 30m** | **~7h 10m** |
 
 ---
 
@@ -508,32 +565,53 @@ This catches integration errors early rather than discovering them at the end.
 
 **Verdict**: Both tools produced equivalent planning quality. Claude Code's main advantage
 is in the execution phase: writing code directly to files rather than requiring manual
-copy-paste. The main risk is increased: code written autonomously must be reviewed carefully.
+copy-paste. The main risk is increased: **code written autonomously must be reviewed carefully**.
 
 ---
 
-## 7. Personal Assessment *[TO BE COMPLETED]*
+## 7. Personal Assessment
 
-> To be written honestly after all implementation phases are done.
-> Will cover: what worked as expected, where the tool failed, how much manual
-> intervention was needed, and whether the approach would be recommended.
+### What worked well
 
-**Preliminary observations**:
+- The agentic mode made the context-gathering phase essentially free: no copy-pasting files
+  into a chat window, no manually listing what was already there. The tool read the codebase,
+  found the Copilot documentation, and built on it without being asked twice.
+- Short, minimal prompts ("procedi con il prossimo step") were sufficient for most phases
+  because the plan was detailed enough to carry the context forward. This is a strong argument
+  for investing time in planning before generation.
+- The tool caught bugs that weren't in the README or the Copilot plan — specifically the
+  `catch (Exception e)` swallowing errors silently and the firstName/lastName swap in the
+  assembler. Both would have been runtime bugs, not compilation errors.
+- Mid-session refactoring requests (constructor injection, builder pattern, UserDetailsService)
+  were handled cleanly without losing the thread of ongoing work.
 
-- The agentic mode significantly reduces friction in context-gathering and boilerplate writing
-- The tool's ability to cross-reference existing documentation (Copilot plan) and build on it
-  is a meaningful productivity gain over starting from scratch
-- The language correction incident shows that explicit constraints in the initial prompt
-  are more reliable than implicit conventions
+### Where it fell short
 
----
+- Generated code occasionally needed minor corrections that only became visible at compile or
+  test time: wrong import, no-args constructor on a `@RequiredArgsConstructor` class,
+  `StringUtils.hasText` inverted by the IDE linter. The tool cannot run `mvn compile` without
+  a user approval gate, so these round-trips add friction.
+- The springdoc version mismatch (3.x vs 2.x) was a real time sink. The tool had to be
+  corrected after the fact rather than catching the version constraint upfront.
+- In a long session, the tool sometimes regenerated slightly stale assumptions (e.g.,
+  referring to a class field that had already been refactored). Keeping sessions focused on
+  one phase at a time reduced this risk but did not eliminate it.
 
-## 8. Recommendations for Future AI Sessions
+### Manual intervention needed
 
-1. **State all constraints upfront**: language, output format, naming conventions, file structure.
-2. **Anchor to existing work**: if prior documentation exists, reference it explicitly.
-3. **One phase at a time**: avoid opening too many files in a single prompt — context window exhaustion degrades
-   quality.
-4. **Always review diffs**: direct file writes require more careful review than chat suggestions.
-5. **Run tests after each phase**: do not batch verification at the end.
-6. **Be explicit about what not to change**: architecture constraints must be re-stated for each phase.
+- Linter auto-corrections to boolean conditions in validators required a manual rollback.
+- One `@PostConstruct` invocation in a test required switching from a simple `new` call to
+  `ReflectionTestUtils` after the constructor was changed.
+- Version pin on springdoc required manual correction from 3.1.0 to 2.8.9.
+- Fixing coding style decision and architectural choices (e.g., `PasswordEncoder` bean, `InMemoryUserDetailsManager`,
+  HTTP status codes)
+  required explicit prompts and review.
+
+### Recommendation
+
+Claude Code is well-suited for projects with a clear phased plan and an existing codebase to
+anchor to. The productivity gain over Copilot chat is most visible in phases that require
+reading many files before writing any — the agentic approach handles this transparently.
+The main discipline required is **reviewing every diff carefully**: the tool writes directly to
+files, so **a missed review is a missed bug**. For a team setting, the approach would benefit from
+a CI gate that runs `mvn test` after each session, replacing the approval-gated shell command.

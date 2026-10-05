@@ -187,6 +187,16 @@ class UserServiceImplTest {
     }
 
     @Test
+    void getUsers_emptyResult_throwsGenericException404() {
+        CriteriaGetUsers criteria = CriteriaGetUsers.builder().offset(0).limit(10).build();
+        when(userRepository.search(criteria)).thenReturn(List.of());
+        when(userRepository.count(criteria)).thenReturn(0);
+
+        GenericException ex = assertThrows(GenericException.class, () -> userService.getUsers(criteria));
+        assertEquals(404, ex.getStatus().getCode());
+    }
+
+    @Test
     void getUsers_repositoryThrowsUnexpected_throwsGenericException500() {
         CriteriaGetUsers criteria = CriteriaGetUsers.builder().offset(0).limit(10).build();
         when(userRepository.search(criteria)).thenThrow(new RuntimeException("Unexpected failure"));

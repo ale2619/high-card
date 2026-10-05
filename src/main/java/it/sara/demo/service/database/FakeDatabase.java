@@ -2,9 +2,9 @@ package it.sara.demo.service.database;
 
 import it.sara.demo.service.database.model.User;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * In-memory user store used as a stand-in for a real database.
@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 public class FakeDatabase {
 
-    public static final List<User> TABLE_USER = new ArrayList<>();
+    public static final List<User> TABLE_USER = new CopyOnWriteArrayList<>();
 
     static {
         for (int i = 0; i < 10; i++) {

@@ -18,6 +18,7 @@ import it.sara.demo.web.user.response.AddUserResponse;
 import it.sara.demo.web.user.response.GetUsersResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -56,7 +57,7 @@ public class UserController {
             description = "Creates a new user. Requires ADMIN role. Email must be a valid RFC 5322 address; phone number must comply with the Italian format."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "User created successfully",
+            @ApiResponse(responseCode = "201", description = "User created successfully",
                     content = @Content(schema = @Schema(implementation = AddUserResponse.class))),
             @ApiResponse(responseCode = "400", description = "Validation failure — email/phone format or blank mandatory field",
                     content = @Content(schema = @Schema(implementation = GenericResponse.class))),
@@ -68,7 +69,7 @@ public class UserController {
     @PutMapping("/users")
     public ResponseEntity<AddUserResponse> addUser(@Valid @RequestBody AddUserRequest request) throws GenericException {
         AddUserResponse response = addUserAssembler.toResponse(userService.addUser(addUserAssembler.toCriteria(request)));
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
@@ -85,7 +86,7 @@ public class UserController {
      */
     @Operation(
             summary = "Search users",
-            description = "Returns a paginated list of users. The request body is optional — omitting it applies defaults (offset=0, limit=10, order=BY_LASTNAME). " +
+            description = "Returns a paginated list of users (POST /api/v1/users/search). The request body is optional — omitting it applies defaults (offset=0, limit=10, order=BY_LASTNAME). " +
                     "The 'query' field performs a case-insensitive contains match on firstName, lastName, and email."
     )
     @ApiResponses({
@@ -93,10 +94,12 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = GetUsersResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid pagination parameters",
                     content = @Content(schema = @Schema(implementation = GenericResponse.class))),
+            @ApiResponse(responseCode = "404", description = "No users match the search criteria",
+                    content = @Content(schema = @Schema(implementation = GenericResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error",
                     content = @Content(schema = @Schema(implementation = GenericResponse.class)))
     })
-    @PostMapping("/users")
+    @PostMapping("/users/search")
     public ResponseEntity<GetUsersResponse> getUsers(@Valid @RequestBody(required = false) GetUsersRequest request) throws GenericException {
         if (request == null) {
             request = new GetUsersRequest(); // Default request if none provided

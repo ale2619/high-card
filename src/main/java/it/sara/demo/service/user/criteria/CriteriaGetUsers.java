@@ -1,6 +1,5 @@
 package it.sara.demo.service.user.criteria;
 
-import it.sara.demo.service.criteria.GenericCriteria;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,7 +11,7 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CriteriaGetUsers extends GenericCriteria {
+public class CriteriaGetUsers {
 
     private String query;
     private int offset;

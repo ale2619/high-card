@@ -8,12 +8,13 @@ import java.util.UUID;
 @Getter
 public class GenericException extends Exception {
 
-    public static final StatusDTO GENERIC_ERROR = StatusDTO.builder()
-            .code(500)
-            .message("Generic error")
-            .build();
-
     private final StatusDTO status;
+
+    /**
+     * Constructs a GenericException with a pre-built {@link StatusDTO}.
+     * The status object should not be a shared static instance — construct a fresh one per throw site
+     * to ensure each exception carries its own unique {@code traceId}.
+     */
 
     public GenericException(StatusDTO status) {
         this.status = status;
