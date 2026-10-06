@@ -1,19 +1,15 @@
 # Final Report — Claude Code Collaboration
 
-> **Note**: This report is a living document. Sections marked *[IN PROGRESS]* will be
-> completed as implementation phases are executed.
-
----
-
 ## 1. Key Prompts Used
 
 ### Most Effective Prompt — Context Bootstrapping
 
 ```
-"Recupera le specifiche per questo progetto dal README.md (file principale)
-e da ciò che è presente nella cartella /ai-assisted/github-copilot.
-Procedi con la stesura dei file necessari nella tua specifica cartella
-come specificato nel file principale e iniziamo con il piano"
+"Sei un tech lead Java/Spring Boot senior. Leggi il README.md e tutto il contenuto di /ai-assisted/github-copilot.
+Sulla base di questi, produci nella cartella /ai-assisted/claude-code: 
+- pre-analysis.md: analisi del codice esistente (bug trovati, rischi, dipendenze mancanti)                                                                                                                                     
+- plan.md: piano di implementazione a fasi ordinate per dipendenza, con per ogni fase                                                                                                                                          
+complessità stimata, file da creare/modificare e criteri di completamento. Non scrivere codice. Non procedere oltre il piano senza mia conferma."
 ```
 
 **Why it worked**: The prompt gave Claude Code autonomy to gather context itself,
@@ -409,7 +405,7 @@ JWT-related code, and cross-check against known API changes.
 
 ---
 
-### Difficulty #3 — Context Window and Multi-File Navigation *[IN PROGRESS]*
+### Difficulty #3 — Context Window and Multi-File Navigation
 
 **Risk**: On projects with many files, previously read files may be evicted from context
 as more files are processed. This could cause the tool to regenerate code that already exists

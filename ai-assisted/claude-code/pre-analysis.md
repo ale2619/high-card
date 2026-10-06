@@ -10,10 +10,11 @@ capabilities. Context was not provided manually: I instructed the tool to read t
 
 ```
 [INITIAL PROMPT]
-"Recupera le specifiche per questo progetto dal README.md (file principale)
-e da ciò che è presente nella cartella /ai-assisted/github-copilot.
-Procedi con la stesura dei file necessari nella tua specifica cartella
-come specificato nel file principale e iniziamo con il piano"
+"Sei un tech lead Java/Spring Boot senior. Leggi il README.md e tutto il contenuto di /ai-assisted/github-copilot.
+Sulla base di questi, produci nella cartella /ai-assisted/claude-code: 
+- pre-analysis.md: analisi del codice esistente (bug trovati, rischi, dipendenze mancanti)                                                                                                                                     
+- plan.md: piano di implementazione a fasi ordinate per dipendenza, con per ogni fase                                                                                                                                          
+complessità stimata, file da creare/modificare e criteri di completamento. Non scrivere codice. Non procedere oltre il piano senza mia conferma."
 ```
 
 ### Information Gathered Autonomously
